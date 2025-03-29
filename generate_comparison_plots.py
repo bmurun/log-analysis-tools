@@ -15,6 +15,7 @@ from bokeh.palettes import Category20, Category10
 from bokeh.io import output_file, show, save
 from bokeh.models import ColumnDataSource, CustomJS, HoverTool
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+from scipy.spatial.transform import Rotation as R
 
 def create_bokeh_figure(title, x_label, y_label):
 
@@ -66,7 +67,19 @@ def get_mcap_data(log_path):
         "pos_z": [],
         "pos_x_stdev": [],
         "pos_y_stdev": [],
-        "pos_z_stdev": []
+        "pos_z_stdev": [],
+        "roll_deg": [],
+        "pitch_deg": [],
+        "yaw_deg": [],
+        "roll_stdev_deg": [],
+        "pitch_stdev_deg": [],
+        "yaw_stdev_deg": [],
+        "vel_x": [],
+        "vel_y": [],
+        "vel_z": [],
+        "vel_x_stdev": [],
+        "vel_y_stdev": [],
+        "vel_z_stdev": [],
     } for topic in topics}
 
     data_dict["/debug/localization/is_ego_indoors"] = {
@@ -106,14 +119,35 @@ def get_mcap_data(log_path):
                 data_dict["/lvx_client/gsof/ins_solution_49"]["gnss_status"].append(data.status.gnss)
             else:
                 pos = data.pose.pose.position
+                vel = data.twist.twist.linear
                 cov = data.pose.covariance
+                vel_cov = data.twist.covariance
                 data_dict[topic_name]["pos_x"].append(pos.x)
                 data_dict[topic_name]["pos_y"].append(pos.y)
                 data_dict[topic_name]["pos_z"].append(pos.z)
+                data_dict[topic_name]["vel_x"].append(vel.x)
+                data_dict[topic_name]["vel_y"].append(vel.y)
+                data_dict[topic_name]["vel_z"].append(vel.z)
 
                 data_dict[topic_name]["pos_x_stdev"].append(np.sqrt(cov[0]))
                 data_dict[topic_name]["pos_y_stdev"].append(np.sqrt(cov[7]))
                 data_dict[topic_name]["pos_z_stdev"].append(np.sqrt(cov[14]))
+
+                data_dict[topic_name]["vel_x_stdev"].append(np.sqrt(vel_cov[0]))
+                data_dict[topic_name]["vel_y_stdev"].append(np.sqrt(vel_cov[7]))
+                data_dict[topic_name]["vel_z_stdev"].append(np.sqrt(vel_cov[14]))
+
+                quat = data.pose.pose.orientation
+                w, x, y, z = quat.w, quat.x, quat.y, quat.z
+
+                Rot = R.from_quat(
+                    [w, x, y, z], scalar_first=True
+                )
+
+                rpy = Rot.as_euler("xyz", degrees = True)
+                data_dict[topic_name]["roll_deg"].append(rpy[0])
+                data_dict[topic_name]["pitch_deg"].append(rpy[1])
+                data_dict[topic_name]["yaw_deg"].append(rpy[2])
 
     min_timestamp = np.inf
     # Subtract the first timestamp from all
@@ -202,6 +236,18 @@ def generate_mcap_comparison_plots(log_path, dir_path):
     ekf_y_pos_stdev_plot = create_bokeh_figure("/localization/kinematic_state - Y Position Stdev", "Timestamp", "Stdev [m]")
     ekf_z_pos_stdev_plot = create_bokeh_figure("/localization/kinematic_state - Z Position Stdev", "Timestamp", "Stdev [m]")
 
+    ekf_vx_plot = create_bokeh_figure("/localization/kinematic_state - X velocity", "Timestamp", "Vx [m/s]")
+    ekf_vy_plot = create_bokeh_figure("/localization/kinematic_state - Y velocity", "Timestamp", "Vy [m/s]")
+    ekf_vz_plot = create_bokeh_figure("/localization/kinematic_state - Z velocity", "Timestamp", "Vz [m/s]")
+
+    ekf_vx_stdev_plot = create_bokeh_figure("/localization/kinematic_state - X Velocity Stdev", "Timestamp", "Stdev [m/s]")
+    ekf_vy_stdev_plot = create_bokeh_figure("/localization/kinematic_state - Y Velocity Stdev", "Timestamp", "Stdev [m/s]")
+    ekf_vz_stdev_plot = create_bokeh_figure("/localization/kinematic_state - Z Velocity Stdev", "Timestamp", "Stdev [m/s]")
+
+    ekf_roll_plot = create_bokeh_figure("/localization/kinematic_state - Roll", "Timestamp", "Roll [deg]")
+    ekf_pitch_plot = create_bokeh_figure("/localization/kinematic_state - Pitch", "Timestamp", "Pitch [deg]")
+    ekf_yaw_plot = create_bokeh_figure("/localization/kinematic_state - Yaw", "Timestamp", "Yaw [deg]")
+
     pose_in_map_x_plot = create_bokeh_figure("/odometry/pose_in_map - X Position", "Timestamp", "X [m]")
     pose_in_map_y_plot = create_bokeh_figure("/odometry/pose_in_map - Y Position", "Timestamp", "Y [m]")
     pose_in_map_z_plot = create_bokeh_figure("/odometry/pose_in_map - Z Position", "Timestamp", "Z [m]")
@@ -234,7 +280,7 @@ def generate_mcap_comparison_plots(log_path, dir_path):
         odometry_gps_y_stdev_plot.line(odometry_gps_timestamp, odometry_gps_y_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
         odometry_gps_z_stdev_plot.line(odometry_gps_timestamp, odometry_gps_z_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
 
-        # /localization/kinematic_state
+        # /localization/kinematic_state position
         ekf = v["/debug/localization/kinematic_state"]
         ekf_timestamp = ekf["timestamp_s"][1:]
         ekf_x = ekf["pos_x"][1:]
@@ -252,6 +298,32 @@ def generate_mcap_comparison_plots(log_path, dir_path):
         ekf_x_pos_stdev_plot.line(ekf_timestamp, ekf_x_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
         ekf_y_pos_stdev_plot.line(ekf_timestamp, ekf_y_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
         ekf_z_pos_stdev_plot.line(ekf_timestamp, ekf_z_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
+
+        # /localization/kinematic_state velocity
+        ekf_vx = ekf["vel_x"][1:]
+        ekf_vy = ekf["vel_y"][1:]
+        ekf_vz = ekf["vel_z"][1:]
+
+        ekf_vx_stdev = ekf["vel_x_stdev"][1:]
+        ekf_vy_stdev = ekf["vel_y_stdev"][1:]
+        ekf_vz_stdev = ekf["vel_z_stdev"][1:]
+
+        ekf_vx_plot.line(ekf_timestamp, ekf_vx, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_vy_plot.line(ekf_timestamp, ekf_vy, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_vz_plot.line(ekf_timestamp, ekf_vz, alpha=0.8, color=color, line_width=2, legend_label=k)
+
+        ekf_vx_stdev_plot.line(ekf_timestamp, ekf_vx_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_vy_stdev_plot.line(ekf_timestamp, ekf_vy_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_vz_stdev_plot.line(ekf_timestamp, ekf_vz_stdev, alpha=0.8, color=color, line_width=2, legend_label=k)
+
+        # /localization/kinematic_state attitude
+        ekf_roll_deg = ekf["roll_deg"][1:]
+        ekf_pitch_deg = ekf["pitch_deg"][1:]
+        ekf_yaw_deg = ekf["yaw_deg"][1:]
+
+        ekf_roll_plot.line(ekf_timestamp, ekf_roll_deg, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_pitch_plot.line(ekf_timestamp, ekf_pitch_deg, alpha=0.8, color=color, line_width=2, legend_label=k)
+        ekf_yaw_plot.line(ekf_timestamp, ekf_yaw_deg, alpha=0.8, color=color, line_width=2, legend_label=k)
 
         # /odometry/pose_in_map
         pose_in_map = v["/odometry/pose_in_map"]
@@ -311,6 +383,27 @@ def generate_mcap_comparison_plots(log_path, dir_path):
         ekf_z_pos_stdev_plot.legend.location = "top_right"
         ekf_z_pos_stdev_plot.legend.click_policy = "hide"
 
+        ekf_vx_plot.legend.location = "top_right"
+        ekf_vx_plot.legend.click_policy = "hide"
+        ekf_vy_plot.legend.location = "top_right"
+        ekf_vy_plot.legend.click_policy = "hide"
+        ekf_vz_plot.legend.location = "top_right"
+        ekf_vz_plot.legend.click_policy = "hide"
+
+        ekf_vx_stdev_plot.legend.location = "top_right"
+        ekf_vy_stdev_plot.legend.click_policy = "hide"
+        ekf_vz_stdev_plot.legend.location = "top_right"
+        ekf_vx_stdev_plot.legend.click_policy = "hide"
+        ekf_vy_stdev_plot.legend.location = "top_right"
+        ekf_vz_stdev_plot.legend.click_policy = "hide"
+
+        ekf_roll_plot.legend.location = "top_right"
+        ekf_roll_plot.legend.click_policy = "hide"
+        ekf_pitch_plot.legend.location = "top_right"
+        ekf_pitch_plot.legend.click_policy = "hide"
+        ekf_yaw_plot.legend.location = "top_right"
+        ekf_yaw_plot.legend.click_policy = "hide"
+
         pose_in_map_x_plot.legend.location = "top_right"
         pose_in_map_x_plot.legend.click_policy = "hide"
         pose_in_map_y_plot.legend.location = "top_right"
@@ -340,6 +433,9 @@ def generate_mcap_comparison_plots(log_path, dir_path):
         [odometry_gps_x_stdev_plot, odometry_gps_y_stdev_plot, odometry_gps_z_stdev_plot],
         [pose_in_map_x_stdev_plot, pose_in_map_y_stdev_plot, pose_in_map_z_stdev_plot],
         [ekf_x_pos_stdev_plot, ekf_y_pos_stdev_plot, ekf_z_pos_stdev_plot],
+        [ekf_vx_plot, ekf_vy_plot, ekf_vz_plot],
+        [ekf_vx_stdev_plot, ekf_vy_stdev_plot, ekf_vz_stdev_plot],
+        [ekf_roll_plot, ekf_pitch_plot, ekf_yaw_plot]
     ]))
 
 if __name__ == "__main__":
