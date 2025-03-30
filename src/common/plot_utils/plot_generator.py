@@ -39,10 +39,88 @@ class PlotGenerator:
         p.xaxis.axis_label = x_label
         p.yaxis.axis_label = y_label
         return p
+    
+    def generate_imu_plots(self, output_file_name):
+        output_file(filename=output_file_name, title="IMU Plots")
+
+        ax_plot = self.create_bokeh_figure("X Acceleration", "Timestamp", "Ax [m^2]")
+        ay_plot = self.create_bokeh_figure("Y Acceleration", "Timestamp", "Ay [m^2]")
+        az_plot = self.create_bokeh_figure("Z Specific Force", "Timestamp", "Az [m/s^2]")
+
+        wx_plot = self.create_bokeh_figure("X Angular Velocity", "Timestamp", "wx [deg/s]")
+        wy_plot = self.create_bokeh_figure("Y Angular Velocity", "Timestamp", "wy [deg/s]")
+        wz_plot = self.create_bokeh_figure("Z Angular Velocity", "Timestamp", "wz [deg/s]")
+
+        is_lvx_imu_available = False
+        is_microstrain_imu_available = False
+
+        if "/lvx_client/imu_raw" in self.data_parser.mcap_data.keys():
+            lvx_imu = self.data_parser.mcap_data["/lvx_client/imu_raw"]
+            lvx_imu_timestamp = lvx_imu["timestamp"]
+
+            lvx_imu_ax = lvx_imu["linear_acceleration"]["x"]
+            lvx_imu_ay = lvx_imu["linear_acceleration"]["y"]
+            lvx_imu_az = lvx_imu["linear_acceleration"]["z"]
+
+            lvx_imu_wx = np.rad2deg(lvx_imu["angular_velocity"]["x"])
+            lvx_imu_wy = np.rad2deg(lvx_imu["angular_velocity"]["y"])
+            lvx_imu_wz = np.rad2deg(lvx_imu["angular_velocity"]["z"])
+
+            is_lvx_imu_available = True
+
+        if "/microstrain/imu/data" in self.data_parser.mcap_data.keys():
+            ms_imu = self.data_parser.mcap_data["/microstrain/imu/data"]
+            ms_imu_timestamp = ms_imu["timestamp"]
+            ms_imu_ax = ms_imu["linear_acceleration"]["x"]
+            ms_imu_ay = ms_imu["linear_acceleration"]["y"]
+            ms_imu_az = ms_imu["linear_acceleration"]["z"]
+
+            ms_imu_wx = np.rad2deg(ms_imu["angular_velocity"]["x"])
+            ms_imu_wy = np.rad2deg(ms_imu["angular_velocity"]["y"])
+            ms_imu_wz = np.rad2deg(ms_imu["angular_velocity"]["z"])
+
+            is_microstrain_imu_available = True
+        
+        if (is_lvx_imu_available):
+            ax_plot.line(lvx_imu_timestamp, lvx_imu_ax, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+            ay_plot.line(lvx_imu_timestamp, lvx_imu_ay, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+            az_plot.line(lvx_imu_timestamp, lvx_imu_az, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+
+            wx_plot.line(lvx_imu_timestamp, lvx_imu_wx, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+            wy_plot.line(lvx_imu_timestamp, lvx_imu_wy, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+            wz_plot.line(lvx_imu_timestamp, lvx_imu_wz, alpha=0.8, color="blue", line_width=2, legend_label="/lvx/imu_raw")
+
+        if (is_microstrain_imu_available):
+            ax_plot.line(ms_imu_timestamp, ms_imu_ax, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+            ay_plot.line(ms_imu_timestamp, ms_imu_ay, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+            az_plot.line(ms_imu_timestamp, ms_imu_az, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+
+            wx_plot.line(ms_imu_timestamp, ms_imu_wx, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+            wy_plot.line(ms_imu_timestamp, ms_imu_wy, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+            wz_plot.line(ms_imu_timestamp, ms_imu_wz, alpha=0.8, color="red", line_width=2, legend_label="/microstrain/imu")
+
+
+        ax_plot.legend.location = "top_right"
+        ax_plot.legend.click_policy = "hide"
+        ay_plot.legend.location = "top_right"
+        ay_plot.legend.click_policy = "hide"
+        az_plot.legend.location = "top_right"
+        az_plot.legend.click_policy = "hide"
+        wx_plot.legend.location = "top_right"
+        wx_plot.legend.click_policy = "hide"
+        wy_plot.legend.location = "top_right"
+        wy_plot.legend.click_policy = "hide"
+        wz_plot.legend.location = "top_right"
+        wz_plot.legend.click_policy = "hide"
+
+        save(gridplot([
+            [ax_plot, ay_plot, az_plot],
+            [wx_plot, wy_plot, wz_plot],
+        ]))
 
     def generate_state_plots(self, output_file_name):
 
-        output_file(filename=output_file_name, title="Plots")
+        output_file(filename=output_file_name, title="State Estimate Plots")
 
         x_plot = self.create_bokeh_figure("X Position", "Timestamp", "X [m]")
         y_plot = self.create_bokeh_figure("Y Position", "Timestamp", "Y [m]")
@@ -346,18 +424,3 @@ class PlotGenerator:
             [roll_plot, pitch_plot, yaw_plot],
             [status_plot]
         ]))
-
-
-
-        
-
-
-
-                                                                      
-
-
-
-
-
-
-

@@ -2,9 +2,21 @@ import numpy as np
 import os
 import click
 import sys
+import multiprocessing
 from common.data_parser.data_parser import DataParser
 from common.plot_utils.plot_generator import PlotGenerator
 
+def process_mcap_file(file_path, output_fqp):
+    file_name, _ = os.path.splitext(os.path.basename(file_path))
+    click.echo(click.style(f"Processing mcap: {file_name}", fg="green", bold=True))
+
+    data_parser = DataParser(file_path)
+    se_output_file_path = os.path.join(output_fqp, file_name + "_state_plots.html")
+    imu_output_file_path = os.path.join(output_fqp, file_name + "_imu_plots.html")
+
+    plot_generator = PlotGenerator(data_parser)
+    plot_generator.generate_state_plots(se_output_file_path)
+    plot_generator.generate_imu_plots(imu_output_file_path)
 
 @click.command()
 @click.option("-l", "--log-path", required=False, type=str, help="Path to .mcap")
@@ -15,7 +27,10 @@ from common.plot_utils.plot_generator import PlotGenerator
     type=str,
     help="Path to a root directory containing .mcap files",
 )
-def generate_mcap_plots(log_path, dir_path):
+@click.option(
+    "-m", "--multiprocess", required=False, is_flag=True, help="Enable multiprocessing"
+)
+def generate_mcap_plots(log_path, dir_path, multiprocess=False):
 
     if log_path and dir_path:
         click.echo(click.style("Multiple options are not supported!", fg="red"))
@@ -42,16 +57,14 @@ def generate_mcap_plots(log_path, dir_path):
         os.makedirs(output_fqp)
     
     output_fqp = os.path.abspath(output_fqp)
+
+    if multiprocess:
+        click.echo(click.style("Multiprocessing enabled!", fg="green", bold=True))
+        with multiprocessing.Pool() as pool:
+            pool.starmap(process_mcap_file, [(fp, output_fqp) for fp in file_paths])
+    else:
+        for file_path in file_paths:
+            process_mcap_file(file_path, output_fqp)
     
-    for file_path in file_paths:
-        file_name, file_extension = os.path.splitext(os.path.basename(file_path))
-        click.echo(click.style("Input mcap: " + file_name, fg="green", bold=True))
-
-        data_parser = DataParser(file_path)
-        output_file_path = os.path.join(output_fqp, file_name + "_state_plots.html")
-        state_plot_generator = PlotGenerator(data_parser).generate_state_plots(output_file_path)
-
-
-
 if __name__ == "__main__":
     generate_mcap_plots()
