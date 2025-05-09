@@ -7,16 +7,18 @@ from common.data_parser.data_parser import DataParser
 from common.plot_utils.plot_generator import PlotGenerator
 
 def process_mcap_file(file_path, output_fqp):
-    file_name, _ = os.path.splitext(os.path.basename(file_path))
-    click.echo(click.style(f"Processing mcap: {file_name}", fg="green", bold=True))
+    file_name, ext = os.path.splitext(os.path.basename(file_path))
+    click.echo(click.style(f"Processing mcap: {file_name + ext}", fg="green", bold=True))
 
     data_parser = DataParser(file_path)
     se_output_file_path = os.path.join(output_fqp, file_name + "_state_plots.html")
     imu_output_file_path = os.path.join(output_fqp, file_name + "_imu_plots.html")
+    nis_output_file_path = os.path.join(output_fqp, file_name + "_nis_metrics_plots.html")
 
     plot_generator = PlotGenerator(data_parser)
     plot_generator.generate_state_plots(se_output_file_path)
-    plot_generator.generate_imu_plots(imu_output_file_path)
+    # plot_generator.generate_imu_plots(imu_output_file_path)
+    # plot_generator.generate_nis_metrics_plots(nis_output_file_path)
 
 @click.command()
 @click.option("-l", "--log-path", required=False, type=str, help="Path to .mcap")

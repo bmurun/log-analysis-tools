@@ -154,26 +154,26 @@ class ComparisonPlotGenerator:
 
             if "/debug/localization/kinematic_state" in mcap_data.keys():
                 debug_ekf = mcap_data["/debug/localization/kinematic_state"]
-                debug_ekf_timestamp = debug_ekf["timestamp"][1:]
-                debug_ekf_x = debug_ekf["pose"]["pose"]["position"]["x"][1:]
-                debug_ekf_y = debug_ekf["pose"]["pose"]["position"]["y"][1:]
-                debug_ekf_z = debug_ekf["pose"]["pose"]["position"]["z"][1:]
-                debug_ekf_x_stdev = np.sqrt(debug_ekf["pose"]["covariance"][1:, 0])
-                debug_ekf_y_stdev = np.sqrt(debug_ekf["pose"]["covariance"][1:, 7])
-                debug_ekf_z_stdev = np.sqrt(debug_ekf["pose"]["covariance"][1:, 14])
+                debug_ekf_timestamp = debug_ekf["timestamp"]
+                debug_ekf_x = debug_ekf["pose"]["pose"]["position"]["x"]
+                debug_ekf_y = debug_ekf["pose"]["pose"]["position"]["y"]
+                debug_ekf_z = debug_ekf["pose"]["pose"]["position"]["z"]
+                debug_ekf_x_stdev = np.sqrt(debug_ekf["pose"]["covariance"][:, 0])
+                debug_ekf_y_stdev = np.sqrt(debug_ekf["pose"]["covariance"][:, 7])
+                debug_ekf_z_stdev = np.sqrt(debug_ekf["pose"]["covariance"][:, 14])
 
-                debug_ekf_vx = debug_ekf["twist"]["twist"]["linear"]["x"][1:]
-                debug_ekf_vy = debug_ekf["twist"]["twist"]["linear"]["y"][1:]
-                debug_ekf_vz = debug_ekf["twist"]["twist"]["linear"]["z"][1:]
-                debug_ekf_vx_stdev = np.sqrt(debug_ekf["twist"]["covariance"][1:, 0])
-                debug_ekf_vy_stdev = np.sqrt(debug_ekf["twist"]["covariance"][1:, 7])
-                debug_ekf_vz_stdev = np.sqrt(debug_ekf["twist"]["covariance"][1:, 14])
+                debug_ekf_vx = debug_ekf["twist"]["twist"]["linear"]["x"]
+                debug_ekf_vy = debug_ekf["twist"]["twist"]["linear"]["y"]
+                debug_ekf_vz = debug_ekf["twist"]["twist"]["linear"]["z"]
+                debug_ekf_vx_stdev = np.sqrt(debug_ekf["twist"]["covariance"][:, 0])
+                debug_ekf_vy_stdev = np.sqrt(debug_ekf["twist"]["covariance"][:, 7])
+                debug_ekf_vz_stdev = np.sqrt(debug_ekf["twist"]["covariance"][:, 14])
 
                 debug_ekf_quat = debug_ekf["pose"]["pose"]["orientation"]
-                debug_ekf_quat["w"] = debug_ekf_quat["w"][1:]
-                debug_ekf_quat["x"] = debug_ekf_quat["x"][1:]
-                debug_ekf_quat["y"] = debug_ekf_quat["y"][1:]
-                debug_ekf_quat["z"] = debug_ekf_quat["z"][1:]
+                debug_ekf_quat["w"] = debug_ekf_quat["w"]
+                debug_ekf_quat["x"] = debug_ekf_quat["x"]
+                debug_ekf_quat["y"] = debug_ekf_quat["y"]
+                debug_ekf_quat["z"] = debug_ekf_quat["z"]
 
                 debug_ekf_roll_deg = np.zeros(debug_ekf_timestamp.shape)
                 debug_ekf_pitch_deg = np.zeros(debug_ekf_timestamp.shape)
@@ -217,26 +217,26 @@ class ComparisonPlotGenerator:
 
             if "/localization/kinematic_state" in mcap_data.keys():
                 ekf = mcap_data["/localization/kinematic_state"]
-                ekf_timestamp = ekf["timestamp"][1:]
-                ekf_x = ekf["pose"]["pose"]["position"]["x"][1:]
-                ekf_y = ekf["pose"]["pose"]["position"]["y"][1:]
-                ekf_z = ekf["pose"]["pose"]["position"]["z"][1:]
-                ekf_x_stdev = np.sqrt(ekf["pose"]["covariance"][1:, 0])
-                ekf_y_stdev = np.sqrt(ekf["pose"]["covariance"][1:, 7])
-                ekf_z_stdev = np.sqrt(ekf["pose"]["covariance"][1:, 14])
+                ekf_timestamp = ekf["timestamp"]
+                ekf_x = ekf["pose"]["pose"]["position"]["x"]
+                ekf_y = ekf["pose"]["pose"]["position"]["y"]
+                ekf_z = ekf["pose"]["pose"]["position"]["z"]
+                ekf_x_stdev = np.sqrt(ekf["pose"]["covariance"][:, 0])
+                ekf_y_stdev = np.sqrt(ekf["pose"]["covariance"][:, 7])
+                ekf_z_stdev = np.sqrt(ekf["pose"]["covariance"][:, 14])
 
-                ekf_vx = ekf["twist"]["twist"]["linear"]["x"][1:]
-                ekf_vy = ekf["twist"]["twist"]["linear"]["y"][1:]
-                ekf_vz = ekf["twist"]["twist"]["linear"]["z"][1:]
-                ekf_vx_stdev = np.sqrt(ekf["twist"]["covariance"][1:, 0])
-                ekf_vy_stdev = np.sqrt(ekf["twist"]["covariance"][1:, 7])
-                ekf_vz_stdev = np.sqrt(ekf["twist"]["covariance"][1:, 14])
+                ekf_vx = ekf["twist"]["twist"]["linear"]["x"]
+                ekf_vy = ekf["twist"]["twist"]["linear"]["y"]
+                ekf_vz = ekf["twist"]["twist"]["linear"]["z"]
+                ekf_vx_stdev = np.sqrt(ekf["twist"]["covariance"][:, 0])
+                ekf_vy_stdev = np.sqrt(ekf["twist"]["covariance"][:, 7])
+                ekf_vz_stdev = np.sqrt(ekf["twist"]["covariance"][:, 14])
 
                 ekf_quat = ekf["pose"]["pose"]["orientation"]
-                ekf_quat["w"] = ekf_quat["w"][1:]
-                ekf_quat["x"] = ekf_quat["x"][1:]
-                ekf_quat["y"] = ekf_quat["y"][1:]
-                ekf_quat["z"] = ekf_quat["z"][1:]
+                ekf_quat["w"] = ekf_quat["w"]
+                ekf_quat["x"] = ekf_quat["x"]
+                ekf_quat["y"] = ekf_quat["y"]
+                ekf_quat["z"] = ekf_quat["z"]
                 ekf_roll_deg = np.zeros(ekf_timestamp.shape)
                 ekf_pitch_deg = np.zeros(ekf_timestamp.shape)
                 ekf_yaw_deg = np.zeros(ekf_timestamp.shape)

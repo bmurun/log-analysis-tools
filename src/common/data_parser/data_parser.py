@@ -7,7 +7,7 @@ from mcap.reader import make_reader
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 
-from common.data_parser.topics import MCAP_ROS2_TOPICS
+from common.data_parser.topics import MCAP_ROS2_TOPICS, MCAP_ROS2_NIS_TOPICS
 
 class DataParser:
     def __init__(self, log_path: str) -> None:
@@ -35,6 +35,28 @@ class DataParser:
 
 
                 self._populate_fields(topic_name, data, self.mcap_data[topic_name])
+
+            for schema, channel, message in reader.iter_messages(topics=MCAP_ROS2_NIS_TOPICS):
+
+                topic_name = channel.topic
+                msg_str = schema.name
+                msg_type = get_message(msg_str)
+                data = deserialize_message(message.data, msg_type)
+
+                if topic_name not in self.mcap_data:
+                    self.mcap_data[topic_name] = {
+                        "timestamp": [],
+                        "measurement_timestamp": [],
+                        "observation": [],
+                        "innovation": [],
+                        "innovation_covariance": [],
+                        "mahalanobis_distance": [],
+                        "mahalanobis_threshold": [],
+                        "is_outlier": [],
+                        "innovation_rejected": [],
+                    }
+
+                self._populate_nis_fields(topic_name, data, self.mcap_data[topic_name])
 
     def _populate_fields(self, topic_name, msg, storage):
         for field_name in msg.get_fields_and_field_types().keys():
@@ -65,14 +87,22 @@ class DataParser:
         """
 
         for topic, data in self.mcap_data.items():
-            if "header" in data:
-                sec_list = data["header"]["stamp"]["sec"]
-                nanosec_list = data["header"]["stamp"]["nanosec"]
-                timestamp_list = np.array(sec_list) + np.array(nanosec_list) / 1e9
-                data["timestamp"] = timestamp_list
-                del data["header"]
+            
+            if topic in MCAP_ROS2_TOPICS:
+                if "header" in data:
+                    sec_list = data["header"]["stamp"]["sec"]
+                    nanosec_list = data["header"]["stamp"]["nanosec"]
+                    timestamp_list = np.array(sec_list) + np.array(nanosec_list) / 1e9
+                    data["timestamp"] = timestamp_list
+                    del data["header"]
+                if "stamp" in data:
+                    sec_list = data["stamp"]["sec"]
+                    nanosec_list = data["stamp"]["nanosec"]
+                    timestamp_list = np.array(sec_list) + np.array(nanosec_list) / 1e9
+                    data["timestamp"] = timestamp_list
+                    del data["stamp"]
 
-            self._convert_lists_to_numpy(data)
+                self._convert_lists_to_numpy(data)
 
         min_timestamp = np.inf
         # Subtract the first timestamp from all
@@ -89,6 +119,40 @@ class DataParser:
             except:
                 continue
 
+
+    def _populate_nis_fields(self, topic_name, msg, storage):
+
+        # First populate the main fitler timestamp that all measurements correspond to
+        timestamp = msg.stamp.sec + msg.stamp.nanosec * 1e-9
+        storage["timestamp"].append(timestamp)
+
+        measurement_timestamp = []
+        observation = []
+        innovation = []
+        mahalanobis_distance = []
+        mahalanobis_threshold = []
+        is_outlier = []
+        innovation_rejected = []
+
+        for nis in msg.nis_metrics:
+            # Each nis has its own timestamp
+            stamp_float = nis.stamp.sec + nis.stamp.nanosec * 1e-9
+            measurement_timestamp.append(stamp_float)
+            observation.append(np.array(nis.observation))
+            innovation.append(np.array(nis.innovation))
+            mahalanobis_distance.append(nis.mahalanobis_distance)
+            mahalanobis_threshold.append(nis.mahalanobis_threshold)
+            is_outlier.append(nis.is_outlier)
+            innovation_rejected.append(nis.innovation_rejected)
+
+        storage["observation"].append(observation)
+        storage["innovation"].append(innovation)
+        storage["mahalanobis_distance"].append(mahalanobis_distance)
+        storage["mahalanobis_threshold"].append(mahalanobis_threshold)
+        storage["is_outlier"].append(is_outlier)
+        storage["innovation_rejected"].append(innovation_rejected)
+
+        return
 
     def _convert_lists_to_numpy(self, data_dict):
         """
