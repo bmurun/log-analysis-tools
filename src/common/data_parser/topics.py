@@ -29,3 +29,14 @@ MCAP_ROS2_NIS_TOPICS = [
     "/localization/ekf/debug/estimator_aid_src_kiss_odometry_pose",
     "/localization/ekf/debug/estimator_aid_src_odometry_twist",
 ]
+
+
+MCAP_ROS2_GSOF_TOPICS = [
+    "/lvx_client/gsof/pdop_info_9",
+    "/lvx_client/gsof/ins_solution_rms_50",
+    "/lvx_client/gsof/ins_solution_49",
+    "/lvx_client/gsof/all_sv_detailed_info_34", # 34
+    "/lvx_client/gsof/lband_status_info_40",
+    "/lvx_client/gsof/position_sigma_info_12",
+    "/lvx_client/navsat",
+]
