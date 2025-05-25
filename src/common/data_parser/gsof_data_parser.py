@@ -73,6 +73,64 @@ class GsofDataParser:
             "tdop": []
         }
 
+        self.received_base_info = {
+            "timestamp": [],
+            "base_valid": [],
+            "base_id": [],
+            "base_lat_deg": [],
+            "base_lon_deg": [],
+            "base_height_m": [],
+        }
+
+        self.position_time_info = {
+            "timestamp": [],
+            "gps_time_ms": [],
+            "gps_week_number": [],
+            "number_space_vehicles_used": [],
+            "init_num": [], # Increments with each initialization (modulo 256)
+            "new_position": [], # position flags 1
+            "clock_fix": [],
+            "horizontal_coords": [],
+            "height_calculated": [],
+            "least_squares": [],
+            "filtered_L1": [],
+            "is_differential": [],
+            "uses_phase": [],
+            "is_RTK_fixed": [],
+            "omniSTAR": [],
+            "static_constraint": [],
+            "network_RTK": [],
+            "dithered_RTK": [],
+            "beacon_DGNSS": [],
+        }
+
+        self.position_type_info = {
+            "timestamp": [],
+            "is_network_solution": [],
+            "is_rtk_fix": [],
+            "init_integrity_1": [],
+            "init_integrity_2": [],
+            "rtk_cond_new_position_computed": [],
+            "rtk_cond_no_synced_pair": [],
+            "rtk_cond_insuff_dd_meas": [],
+            "rtk_cond_ref_pos_unavailable": [],
+            "rtk_cond_failed_integer_ver_with_fix_sol": [],
+            "rtk_cond_sol_res_rms_exceeds": [],
+            "rtk_cond_pdop_exceeds": [],
+            "correction_age": [],
+            "position_fix_type": []
+        }
+
+        self.code_lat_lon_ht = {
+            "timestamp": [],
+            "position_type": [],
+            "lat_deg": [],
+            "lon_deg": [],
+            "height": [],
+            "gps_week_number": [],
+            "gps_time_ms": []
+        }
+
         self._parse_mcap(log_path)
         self._process_data()
 
@@ -102,6 +160,10 @@ class GsofDataParser:
 
                         prn = sat_data.prn
                         sv_system = sat_data.sv_system
+
+                        if (sv_system == 1): # SBAS
+                            continue
+
                         azimuth = sat_data.azimuth
                         elevation = sat_data.elevation
 
@@ -134,8 +196,8 @@ class GsofDataParser:
                         self.gnss_data[str(sv_system)][str(prn)]["is_used_in_rtk"].append(is_used_in_rtk)
                 elif topic_name == "/lvx_client/gsof/position_sigma_info_12":
 
-                    north_stdev = data.sigma_east 
-                    east_stdev = data.sigma_north 
+                    north_stdev = data.sigma_north 
+                    east_stdev = data.sigma_east 
                     down_stdev = data.sigma_up
 
                     sec= data.header.stamp.sec
@@ -164,7 +226,7 @@ class GsofDataParser:
                     self.ins_solution["pitch"].append(data.pitch)
                     self.ins_solution["yaw"].append(data.heading)
                     self.ins_solution["north_vel"].append(data.velocity.north)
-                    self.ins_solution["east_vel"].append(data.velocity.north)
+                    self.ins_solution["east_vel"].append(data.velocity.east)
                     self.ins_solution["down_vel"].append(data.velocity.down)
                 elif topic_name == "/lvx_client/navsat":
 
@@ -197,11 +259,104 @@ class GsofDataParser:
                     self.ins_solution_rms["east_stdev"].append(data.pos_rms_error.east)
                     self.ins_solution_rms["down_stdev"].append(data.pos_rms_error.down)
                     self.ins_solution_rms["gnss_status"].append(data.status.gnss)
+
+                elif topic_name == "/lvx_client/gsof/position_time_info_1":
+                    # sec = data.header.stamp.sec
+                    # nanosec = data.header.stamp.nanosec
+                    # timestamp = sec + nanosec / 1e9
+                    timestamp = 0
+                    self.position_time_info["timestamp"].append(timestamp)
+                    self.position_time_info["gps_time_ms"].append(data.gps_time.time)
+                    self.position_time_info["gps_week_number"].append(data.gps_time.week)
+                    self.position_time_info["number_space_vehicles_used"].append(data.number_space_vehicles_used)
+                    self.position_time_info["init_num"].append(data.init_num)
+
+                    new_position = bool(data.position_flags_1 & (1 << 0))  # Bit 0
+                    clock_fix = bool(data.position_flags_1 & (1 << 1))     # Bit 1
+                    horizontal_coords = bool(data.position_flags_1 & (1 << 2))  # Bit 2
+                    height_calculated = bool(data.position_flags_1 & (1 << 3))  # Bit 3
+                    least_squares = bool(data.position_flags_1 & (1 << 5))      # Bit 5
+                    filtered_L1 = bool(data.position_flags_1 & (1 << 7))        # Bit 7
+
+                    self.position_time_info["new_position"].append(new_position)
+                    self.position_time_info["clock_fix"].append(clock_fix)
+                    self.position_time_info["horizontal_coords"].append(horizontal_coords)
+                    self.position_time_info["height_calculated"].append(height_calculated)
+                    self.position_time_info["least_squares"].append(least_squares)
+                    self.position_time_info["filtered_L1"].append(filtered_L1)
+
+                    is_differential = bool(data.position_flags_2 & (1 << 0))       # Bit 0
+                    uses_phase = bool(data.position_flags_2 & (1 << 1))            # Bit 1
+                    is_RTK_fixed = bool(data.position_flags_2 & (1 << 2))          # Bit 2
+                    omniSTAR = bool(data.position_flags_2 & (1 << 3))              # Bit 3
+                    static_constraint = bool(data.position_flags_2 & (1 << 4))     # Bit 4
+                    network_RTK = bool(data.position_flags_2 & (1 << 5))           # Bit 5
+                    dithered_RTK = bool(data.position_flags_2 & (1 << 6))          # Bit 6
+                    beacon_DGNSS = bool(data.position_flags_2 & (1 << 7))          # Bit 7
+
+                    self.position_time_info["is_differential"].append(is_differential)
+                    self.position_time_info["uses_phase"].append(uses_phase)
+                    self.position_time_info["is_RTK_fixed"].append(is_RTK_fixed)
+                    self.position_time_info["omniSTAR"].append(omniSTAR)
+                    self.position_time_info["static_constraint"].append(static_constraint)
+                    self.position_time_info["network_RTK"].append(network_RTK)
+                    self.position_time_info["dithered_RTK"].append(dithered_RTK)
+                    self.position_time_info["beacon_DGNSS"].append(beacon_DGNSS)
+
+
+                elif topic_name == "/lvx_client/gsof/received_base_info_35":
+                    sec = data.header.stamp.sec
+                    nanosec = data.header.stamp.nanosec
+                    timestamp = sec + nanosec / 1e9
+
+                    self.received_base_info["timestamp"].append(timestamp)
+                    self.received_base_info["base_id"].append(data.id)
+                    self.received_base_info["base_lat_deg"].append(np.rad2deg(data.llh.latitude))
+                    self.received_base_info["base_lon_deg"].append(np.rad2deg(data.llh.longitude))
+                    self.received_base_info["base_height_m"].append(data.llh.height)
+
+                    base_valid = bool(data.flags & (1 << 3))
+                    self.received_base_info["base_valid"].append(base_valid)
+                elif topic_name == "/lvx_client/gsof/position_type_info_38":
+                    sec = data.header.stamp.sec
+                    nanosec = data.header.stamp.nanosec
+                    timestamp = sec + nanosec / 1e9
+
+                    self.position_type_info["timestamp"].append(timestamp)
+                    self.position_type_info["is_network_solution"].append(bool(data.solution_flags & (1 << 0)))
+                    self.position_type_info["is_rtk_fix"].append(bool(data.solution_flags & (1 << 1)))
+                    self.position_type_info["init_integrity_1"].append(bool(data.solution_flags & (1 << 2)))
+                    self.position_type_info["init_integrity_2"].append(bool(data.solution_flags & (1 << 3)))
+
+                    # RTK condition is a value
+                    self.position_type_info["rtk_cond_new_position_computed"].append(data.rtk_condition == 0)
+                    self.position_type_info["rtk_cond_no_synced_pair"].append(data.rtk_condition == 1)
+                    self.position_type_info["rtk_cond_insuff_dd_meas"].append(data.rtk_condition == 2)
+                    self.position_type_info["rtk_cond_ref_pos_unavailable"].append(data.rtk_condition == 3)
+                    self.position_type_info["rtk_cond_failed_integer_ver_with_fix_sol"].append(data.rtk_condition == 4)
+                    self.position_type_info["rtk_cond_sol_res_rms_exceeds"].append(data.rtk_condition == 5)
+                    self.position_type_info["rtk_cond_pdop_exceeds"].append(data.rtk_condition == 6)
+
+                    self.position_type_info["correction_age"].append(data.correction_age)
+                    self.position_type_info["position_fix_type"].append(data.position_fix_type)
+
+                elif topic_name == "/lvx_client/gsof/code_lat_long_ht_62":
+                    sec = data.header.stamp.sec
+                    nanosec = data.header.stamp.nanosec
+                    timestamp = sec + nanosec / 1e9
+
+                    self.code_lat_lon_ht["timestamp"].append(timestamp)
+                    self.code_lat_lon_ht["position_type"].append(data.position_type)
+                    self.code_lat_lon_ht["gps_week_number"].append(data.gps_time.week)
+                    self.code_lat_lon_ht["gps_time_ms"].append(data.gps_time.time)
+                    self.code_lat_lon_ht["lat_deg"].append(np.rad2deg(data.latitude))
+                    self.code_lat_lon_ht["lon_deg"].append(np.rad2deg(data.longitude))
+                    self.code_lat_lon_ht["height"].append(data.height)
                 else:
                     pass
 
     def _process_data(self):
-        """ Post processing
+        """ Post processing: validate timestamps and normalize to start from zero
         """
 
         for topic, data in self.mcap_data.items():
@@ -222,20 +377,61 @@ class GsofDataParser:
 
                 self._convert_lists_to_numpy(data)
 
-        min_timestamp = np.inf
-        # Subtract the first timestamp from all
-        for k, v in self.mcap_data.items():
-            try:
-                min_timestamp_v = np.min(v["timestamp"])
-                min_timestamp = np.minimum(min_timestamp, min_timestamp_v)
-            except:
-                continue
+        # Interpolate/extrapolate timestamp for messages that don't have
+        # header timestamp properly logged
+        self.first_ts = self.ins_solution["timestamp"][0]
+        self.last_ts = self.ins_solution["timestamp"][-1]
 
-        for k, v in self.mcap_data.items():
-            try:
-                v["timestamp"] -= min_timestamp
-            except:
-                continue
+        # Check each data source and update time range or interpolate invalid timestamps
+        data_sources = [
+            ("code_lat_lon_ht", self.code_lat_lon_ht),
+            ("pdop_info", self.pdop_info),
+            ("position_sigma", self.position_sigma),
+            ("position_time_info", self.position_time_info),
+            ("position_type_info", self.position_type_info),
+            ("received_base_info", self.received_base_info),
+            ("ins_solution_rms", self.ins_solution_rms),
+            ("navsat", self.navsat),
+            ("gnss_data", self.gnss_data)
+        ]
+
+        for name, data_dict in data_sources:
+            if "timestamp" in data_dict and len(data_dict["timestamp"]) > 0:
+                timestamp_array = data_dict["timestamp"]
+                timestamp_valid = timestamp_array[-1] > 0
+
+                if timestamp_valid:
+                    self.first_ts = np.minimum(self.first_ts, timestamp_array[0])
+                    self.last_ts = np.maximum(self.last_ts, timestamp_array[-1])
+                else:
+                    # Interpolate timestamps for invalid data
+                    data_dict["timestamp"] = np.linspace(self.first_ts, self.last_ts, len(timestamp_array))
+
+        # Normalize all timestamps to start from zero
+        self._normalize_timestamps_to_zero()
+
+    def _normalize_timestamps_to_zero(self):
+        """Subtract first_ts from all timestamps to start from zero."""
+        data_sources = [
+            self.position_sigma,
+            self.gnss_data,
+            self.ins_solution,
+            self.ins_solution_rms,
+            self.navsat,
+            self.pdop_info,
+            self.received_base_info,
+            self.position_time_info,
+            self.position_type_info,
+            self.code_lat_lon_ht
+        ]
+
+        for data_dict in data_sources:
+            if "timestamp" in data_dict and len(data_dict["timestamp"]) > 0:
+                data_dict["timestamp"] = data_dict["timestamp"] - self.first_ts
+
+        # Update the time range
+        self.last_ts = self.last_ts - self.first_ts
+        self.first_ts = 0.0
 
     def _convert_lists_to_numpy(self, data_dict):
         """

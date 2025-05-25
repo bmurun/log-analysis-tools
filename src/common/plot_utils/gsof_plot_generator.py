@@ -4,9 +4,11 @@ from bokeh.plotting import figure
 from bokeh.models import Label, CrosshairTool, Span, Circle, BoxAnnotation
 from bokeh.palettes import Category20, Category10
 from bokeh.io import output_file, show, save
-from bokeh.models import ColumnDataSource, CustomJS, HoverTool
+from bokeh.models import ColumnDataSource, CustomJS, HoverTool, Div
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
+
 from scipy.spatial.transform import Rotation as R
+
 
 import numpy as np
 import copy
@@ -25,7 +27,13 @@ class GsofPlotGenerator:
         self.ref_lla = None
         self.ref_lla_initialized = False
 
-    def _lla2ned(self, lat_deg, lon_deg, alt_m):
+        # There are a lot of GSOF messages with no proper header timestamp
+        # Interpolate from the INS solution message which is safe
+        # to assume that it will always exist
+        self.first_ts = self.data_parser.ins_solution["timestamp"][0]
+        self.last_ts = self.data_parser.ins_solution["timestamp"][1]
+
+    def lla2ned(self, lat_deg, lon_deg, alt_m):
 
         n_m, e_m, d_m = 0, 0, 0
 
@@ -74,6 +82,301 @@ class GsofPlotGenerator:
 
         return p
     
+    def generate_pvt_plots(self, output_file_name):
+
+        output_file(filename=output_file_name, title="PVT Plots")
+
+        ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=500, height=500)
+
+        x_plot = self.create_bokeh_figure("North Position", "Timestamp", "X [m]")
+        y_plot = self.create_bokeh_figure("East Position", "Timestamp", "Y [m]")
+        z_plot = self.create_bokeh_figure("Down Position", "Timestamp", "Z [m]")
+
+        gnss_status_plot = self.create_bokeh_figure("GNSS Status\n0: No Fix, 1: GPS SPS, 2: DGNSS\n3: GPS PPS, 4: RTK Fixed, 5: RTK Float\n6: Dead Reckoning ", "Timestamp", "Status")
+
+        x_stdev_plot = self.create_bokeh_figure("X Position Stdev", "Timestamp", "Stdev [m]")
+        y_stdev_plot = self.create_bokeh_figure("Y Position Stdev", "Timestamp", "Stdev [m]")
+        z_stdev_plot = self.create_bokeh_figure("Z Position Stdev", "Timestamp", "Stdev [m]")
+
+        vx_plot = self.create_bokeh_figure("X Velocity", "Timestamp", "Vx [m]")
+        vy_plot = self.create_bokeh_figure("Y Velocity", "Timestamp", "Vy [m]")
+        vz_plot = self.create_bokeh_figure("Z Velocity", "Timestamp", "Vz [m]")
+
+        vx_stdev_plot = self.create_bokeh_figure("X Velocity Stdev", "Timestamp", "Stdev [m/s]")
+        vy_stdev_plot = self.create_bokeh_figure("Y Velocity Stdev", "Timestamp", "Stdev [m/s]")
+        vz_stdev_plot = self.create_bokeh_figure("Z Velocity Stdev", "Timestamp", "Stdev [m/s]")
+
+        is_code_pvt_available = False
+
+        ins_solution_timestamp = self.data_parser.ins_solution["timestamp"]
+        ins_solution_gnss_status = self.data_parser.ins_solution["gnss_status"]
+        ins_solution_lat_deg = self.data_parser.ins_solution["latitude"]
+        ins_solution_lon_deg = self.data_parser.ins_solution["longitude"]
+        ins_solution_lat_height = self.data_parser.ins_solution["altitude"]
+        ins_solution_north = []
+        ins_solution_east = []
+        ins_solution_down = []
+
+        for lat, lon, alt in zip(ins_solution_lat_deg, ins_solution_lon_deg, ins_solution_lat_height):
+            n_m, e_m, d_m = self.lla2ned(lat, lon, alt)
+            ins_solution_north.append(n_m)
+            ins_solution_east.append(e_m)
+            ins_solution_down.append(d_m)
+
+
+        if hasattr(self.data_parser, "code_lat_lon_ht"):
+            code_lat_long_ht = self.data_parser.code_lat_lon_ht
+            code_lat_long_ht_timestamp = code_lat_long_ht["timestamp"]
+            code_lat_long_lat_deg = code_lat_long_ht["lat_deg"]
+            code_lat_long_lon_deg = code_lat_long_ht["lon_deg"]
+            code_lat_long_height = code_lat_long_ht["height"]
+            code_lat_lon_position_type = code_lat_long_ht["position_type"]
+
+            code_lat_long_north = []
+            code_lat_long_east = []
+            code_lat_long_down = []
+
+            for lat, lon, alt in zip(code_lat_long_lat_deg, code_lat_long_lon_deg, code_lat_long_height):
+                n_m, e_m, d_m = self.lla2ned(lat, lon, alt)
+                code_lat_long_north.append(n_m)
+                code_lat_long_east.append(e_m)
+                code_lat_long_down.append(d_m)
+
+            is_code_pvt_available = True
+
+        
+        if (is_code_pvt_available):
+            init_timestamp = np.minimum(ins_solution_timestamp[0], code_lat_long_ht_timestamp[0])
+            # Subtract the first timestamp from both
+            ins_solution_timestamp -= init_timestamp
+            code_lat_long_ht_timestamp -= init_timestamp
+        else:
+            ins_solution_timestamp -= ins_solution_timestamp[0]
+        
+
+        ne_plot.circle(ins_solution_east, ins_solution_north, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+
+        x_plot.circle(ins_solution_timestamp, ins_solution_north, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+
+        y_plot.circle(ins_solution_timestamp, ins_solution_east, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+
+        z_plot.circle(ins_solution_timestamp, ins_solution_down, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+
+        gnss_status_plot.circle(ins_solution_timestamp, ins_solution_gnss_status, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+
+        if (is_code_pvt_available):
+            ne_plot.circle(code_lat_long_east, code_lat_long_north, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+        
+            x_plot.circle(code_lat_long_ht_timestamp, code_lat_long_north, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+
+            y_plot.circle(code_lat_long_ht_timestamp, code_lat_long_east, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+
+            z_plot.circle(code_lat_long_ht_timestamp, code_lat_long_down, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+
+            gnss_status_plot.circle(code_lat_long_ht_timestamp, code_lat_lon_position_type, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+
+
+        ne_plot.legend.location = "top_right"
+        ne_plot.legend.click_policy = "hide"
+
+        x_plot.legend.location = "top_right"
+        x_plot.legend.click_policy = "hide"   
+        y_plot.legend.location = "top_right"
+        y_plot.legend.click_policy = "hide"  
+        z_plot.legend.location = "top_right"
+        z_plot.legend.click_policy = "hide"  
+
+        gnss_status_plot.legend.location = "top_right"
+        gnss_status_plot.legend.click_policy = "hide"  
+
+        save(gridplot([
+            [ne_plot],
+            [x_plot, y_plot, z_plot],
+            [gnss_status_plot]
+        ]))
+
+        return
+
+    
+    def generate_rtk_status_plots(self, output_file_name):
+
+        output_file(filename=output_file_name, title="RTK Status")
+
+        num_of_svs_plot = self.create_bokeh_figure("Number of Satellites Used", "Timestamp", "Num")
+        init_num_plot = self.create_bokeh_figure("Number of Inits", "Timestamp", "Num")
+        position_flags_1_plot = self.create_bokeh_figure("Position Flags 1", "Timestamp", "Bool", height=400)
+        position_flags_2_plot = self.create_bokeh_figure("Position Flags 2", "Timestamp", "Bool", height=400)
+
+        network_solution_plot = self.create_bokeh_figure("Network Solution", "Timestamp", "Bool")
+        correction_age_plot = self.create_bokeh_figure("Correction Age", "Timestamp", "Age [s]")
+        rtk_fix_plot = self.create_bokeh_figure("RTK Fix", "Timestamp", "Bool")
+        rtk_condition_plot = self.create_bokeh_figure("RTK Condition", "Timestamp", "Bool", height=400)
+        position_fix_type_plot = self.create_bokeh_figure("Position Fix Type", "Timestamp", "Fix Type")
+
+        base_valid_plot = self.create_bokeh_figure("Reference Station Valid", "Timestamp", "Bool")
+        base_id_plot = self.create_bokeh_figure("Reference Station ID", "Timestamp", "ID")
+        base_lat_plot = self.create_bokeh_figure("Reference Station Latitude", "Timestamp", "Latitude [deg]")
+        base_lon_plot = self.create_bokeh_figure("Reference Station Latitude", "Timestamp", "Longitude [deg]")
+        base_alt_plot = self.create_bokeh_figure("Reference Station Altitude WGS84", "Timestamp", "Altitude [m]")
+
+        is_position_time_info_available = False
+        is_position_type_info_available = False
+        is_received_base_info_available = False
+
+        if hasattr(self.data_parser, "position_time_info"):
+
+            position_time_info = self.data_parser.position_time_info
+            position_time_info_timestamp = position_time_info["timestamp"]
+            position_time_info_num_svs = position_time_info["number_space_vehicles_used"]
+            position_time_info_init_num = position_time_info["init_num"]
+
+            new_position = position_time_info["new_position"]
+            clock_fix = position_time_info["clock_fix"]
+            horizontal_coords = position_time_info["horizontal_coords"]
+            height_calculated = position_time_info["height_calculated"]
+            least_squares = position_time_info["least_squares"]
+            filtered_L1 = position_time_info["filtered_L1"]
+
+            is_differential = position_time_info["is_differential"]
+            uses_phase = position_time_info["uses_phase"]
+            is_RTK_fixed = position_time_info["is_RTK_fixed"]
+            omniSTAR = position_time_info["omniSTAR"]
+            static_constraint = position_time_info["static_constraint"]
+            network_RTK = position_time_info["network_RTK"]
+            dithered_RTK = position_time_info["dithered_RTK"]
+            beacon_DGNSS = position_time_info["beacon_DGNSS"]
+
+            is_position_time_info_available = True
+
+        if hasattr(self.data_parser, "position_type_info"):
+            position_type_info = self.data_parser.position_type_info
+            position_type_info_timestamp = position_type_info["timestamp"]
+            position_type_info_is_network_solution = position_type_info["is_network_solution"]
+            position_type_info_is_rtk_fix = position_type_info["is_rtk_fix"]
+
+            position_type_info_correction_age = position_type_info["correction_age"]
+            position_type_info_position_fix_type = position_type_info["position_fix_type"]
+
+            rtk_cond_new_position_computed = position_type_info["rtk_cond_new_position_computed"]
+            rtk_cond_no_synced_pair = position_type_info["rtk_cond_no_synced_pair"]
+            rtk_cond_insuff_dd_meas = position_type_info["rtk_cond_insuff_dd_meas"]
+            rtk_cond_ref_pos_unavailable = position_type_info["rtk_cond_ref_pos_unavailable"]
+            rtk_cond_failed_integer_ver_with_fix_sol = position_type_info["rtk_cond_failed_integer_ver_with_fix_sol"]
+            rtk_cond_sol_res_rms_exceeds = position_type_info["rtk_cond_sol_res_rms_exceeds"]
+            rtk_cond_pdop_exceeds = position_type_info["rtk_cond_pdop_exceeds"]
+
+            is_position_type_info_available = True
+        
+        if hasattr(self.data_parser, "received_base_info"):
+            received_base_info = self.data_parser.received_base_info
+            received_base_info_timestamp = received_base_info["timestamp"]
+
+            base_valid = received_base_info["base_valid"]
+            base_id = received_base_info["base_id"]
+
+            base_lat_deg = received_base_info["base_lat_deg"]
+            base_lon_deg = received_base_info["base_lon_deg"]
+            base_height_m = received_base_info["base_height_m"]
+
+            base_north_m = []
+            base_east_m = []
+            base_down_m = []
+
+            is_received_base_info_available = True
+
+        if (is_position_time_info_available):
+
+            num_of_svs_plot.line(position_time_info_timestamp, position_time_info_num_svs, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
+            init_num_plot.line(position_time_info_timestamp, position_time_info_init_num, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
+
+            position_flags_1_plot.line(position_time_info_timestamp, new_position, alpha=0.8, color="blue", line_width=2, legend_label="new_position")
+            position_flags_1_plot.line(position_time_info_timestamp, clock_fix, alpha=0.8, color="red", line_width=2, legend_label="clock_fix")
+            position_flags_1_plot.line(position_time_info_timestamp, horizontal_coords, alpha=0.8, color="green", line_width=2, legend_label="horizontal_coords")
+            position_flags_1_plot.line(position_time_info_timestamp, height_calculated, alpha=0.8, color="orange", line_width=2, legend_label="height_calculated")
+            position_flags_1_plot.line(position_time_info_timestamp, least_squares, alpha=0.8, color="purple", line_width=2, legend_label="least_squares")
+            position_flags_1_plot.line(position_time_info_timestamp, filtered_L1, alpha=0.8, color="cyan", line_width=2, legend_label="filtered_L1")
+
+            position_flags_2_plot.line(position_time_info_timestamp, is_differential, alpha=0.8, color="blue", line_width=2, legend_label="is_differential")
+            position_flags_2_plot.line(position_time_info_timestamp, uses_phase, alpha=0.8, color="red", line_width=2, legend_label="uses_phase")
+            position_flags_2_plot.line(position_time_info_timestamp, is_RTK_fixed, alpha=0.8, color="green", line_width=2, legend_label="is_RTK_fixed")
+            position_flags_2_plot.line(position_time_info_timestamp, omniSTAR, alpha=0.8, color="orange", line_width=2, legend_label="omniSTAR")
+            position_flags_2_plot.line(position_time_info_timestamp, static_constraint, alpha=0.8, color="purple", line_width=2, legend_label="static_constraint")
+            position_flags_2_plot.line(position_time_info_timestamp, network_RTK, alpha=0.8, color="cyan", line_width=2, legend_label="network_RTK")
+            position_flags_2_plot.line(position_time_info_timestamp, dithered_RTK, alpha=0.8, color="brown", line_width=2, legend_label="dithered_RTK")
+            position_flags_2_plot.line(position_time_info_timestamp, beacon_DGNSS, alpha=0.8, color="magenta", line_width=2, legend_label="beacon_DGNSS")
+
+
+        if (is_position_type_info_available):
+            correction_age_plot.line(position_type_info_timestamp, position_type_info_correction_age, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            rtk_fix_plot.line(position_type_info_timestamp, position_type_info_is_rtk_fix, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+
+            network_solution_plot.line(position_type_info_timestamp, position_type_info_is_network_solution, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_new_position_computed, alpha=0.8, color="blue", line_width=2, legend_label="rtk_cond_new_position_computed")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_no_synced_pair, alpha=0.8, color="red", line_width=2, legend_label="rtk_cond_no_synced_pair")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_insuff_dd_meas, alpha=0.8, color="green", line_width=2, legend_label="rtk_cond_insuff_dd_meas")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_ref_pos_unavailable, alpha=0.8, color="orange", line_width=2, legend_label="rtk_cond_ref_pos_unavailable")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_failed_integer_ver_with_fix_sol, alpha=0.8, color="purple", line_width=2, legend_label="rtk_cond_failed_integer_ver_with_fix_sol")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_sol_res_rms_exceeds, alpha=0.8, color="brown", line_width=2, legend_label="rtk_cond_sol_res_rms_exceeds")
+            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_pdop_exceeds, alpha=0.8, color="cyan", line_width=2, legend_label="rtk_cond_pdop_exceeds")
+
+            position_fix_type_plot.line(position_type_info_timestamp, position_type_info_position_fix_type, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+
+        if (is_received_base_info_available):
+            base_valid_plot.line(received_base_info_timestamp, base_valid, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_id_plot.line(received_base_info_timestamp, base_id, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_lat_plot.line(received_base_info_timestamp, base_lat_deg, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_lon_plot.line(received_base_info_timestamp, base_lon_deg, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_alt_plot.line(received_base_info_timestamp, base_height_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+
+        num_of_svs_plot.legend.location = "top_right"
+        num_of_svs_plot.legend.click_policy = "hide"  
+        init_num_plot.legend.location = "top_right"
+        init_num_plot.legend.click_policy = "hide"  
+        position_flags_1_plot.legend.location = "top_right"
+        position_flags_1_plot.legend.click_policy = "hide"  
+        position_flags_2_plot.legend.location = "top_right"
+        position_flags_2_plot.legend.click_policy = "hide"  
+
+        correction_age_plot.legend.location = "top_right"
+        correction_age_plot.legend.click_policy = "hide"  
+        rtk_fix_plot.legend.location = "top_right"
+        rtk_fix_plot.legend.click_policy = "hide"  
+        network_solution_plot.legend.location = "top_right"
+        network_solution_plot.legend.click_policy = "hide"  
+        rtk_condition_plot.legend.location = "top_right"
+        rtk_condition_plot.legend.click_policy = "hide"  
+        position_fix_type_plot.legend.location = "top_right"
+        position_fix_type_plot.legend.click_policy = "hide"  
+        base_valid_plot.legend.location = "top_right"
+        base_valid_plot.legend.click_policy = "hide"  
+        base_id_plot.legend.location = "top_right"
+        base_id_plot.legend.click_policy = "hide" 
+        base_lat_plot.legend.location = "top_right"
+        base_lat_plot.legend.click_policy = "hide" 
+        base_lon_plot.legend.location = "top_right"
+        base_lon_plot.legend.click_policy = "hide" 
+        base_alt_plot.legend.location = "top_right"
+        base_alt_plot.legend.click_policy = "hide" 
+
+        save(gridplot([
+            [Div(text="<h1 style='margin-left: 2em;'>Position Time Info (1)</h1>")],
+            [num_of_svs_plot, init_num_plot],
+            [position_flags_1_plot, position_flags_2_plot],
+            [Div(text="<h1 style='margin-left: 2em;'>Position Type Info (38)</h1>")],
+            [network_solution_plot],
+            [rtk_fix_plot, rtk_condition_plot],
+            [correction_age_plot, position_fix_type_plot],
+            [Div(text="<h1 style='margin-left: 2em;'>Reference Station (35)</h1>")],
+            [base_valid_plot, base_id_plot, base_alt_plot],
+            [base_lat_plot, base_lon_plot, base_alt_plot],
+        ]))
+
     def generate_sky_plots(self, output_file_name):
 
         output_file(filename=output_file_name, title="IMU Plots")

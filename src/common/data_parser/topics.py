@@ -32,6 +32,10 @@ MCAP_ROS2_NIS_TOPICS = [
 
 
 MCAP_ROS2_GSOF_TOPICS = [
+    "/lvx_client/gsof/position_time_info_1",
+    "/lvx_client/gsof/received_base_info_35",
+    "/lvx_client/gsof/position_type_info_38",
+    "/lvx_client/gsof/code_lat_long_ht_62",
     "/lvx_client/gsof/pdop_info_9",
     "/lvx_client/gsof/ins_solution_rms_50",
     "/lvx_client/gsof/ins_solution_49",

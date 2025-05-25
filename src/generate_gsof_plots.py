@@ -12,15 +12,19 @@ def process_mcap_file(file_path, output_fqp):
 
     data_parser = GsofDataParser(file_path)
 
-    sky_plot_output_file_path = os.path.join(output_fqp, file_name + "_sky_plots.html")
-    sat_plot_output_file_path = os.path.join(output_fqp, file_name + "_sat_plots.html")
-    noise_plot_output_file_path = os.path.join(output_fqp, file_name + "_noise_plots.html")
-    dop_plot_output_file_path = os.path.join(output_fqp, file_name + "_dop_plots.html")
+    pvt_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_pvt_plots.html")
+    rtk_status_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_rtk_status_plots.html")
+    sky_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_sky_plots.html")
+    sat_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_sat_plots.html")
+    noise_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_noise_plots.html")
+    dop_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_dop_plots.html")
 
     plot_generator = GsofPlotGenerator(data_parser)
-    # plot_generator.generate_sky_plots(sky_plot_output_file_path)
-    # plot_generator.generate_satellite_plots(sat_plot_output_file_path)
-    # plot_generator.generate_noise_plots(noise_plot_output_file_path)
+    plot_generator.generate_pvt_plots(pvt_plot_output_file_path)
+    plot_generator.generate_rtk_status_plots(rtk_status_plot_output_file_path)
+    plot_generator.generate_sky_plots(sky_plot_output_file_path)
+    plot_generator.generate_satellite_plots(sat_plot_output_file_path)
+    plot_generator.generate_noise_plots(noise_plot_output_file_path)
     plot_generator.generate_dop_plots(dop_plot_output_file_path)
 
 @click.command()
