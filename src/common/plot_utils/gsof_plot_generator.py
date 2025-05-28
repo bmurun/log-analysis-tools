@@ -1,25 +1,38 @@
 from bokeh.plotting import figure, output_file, save
 from bokeh.layouts import gridplot
-from bokeh.plotting import figure
 from bokeh.models import Label, CrosshairTool, Span, Circle, BoxAnnotation
 from bokeh.palettes import Category20, Category10
-from bokeh.io import output_file, show, save
+from bokeh.io import show
 from bokeh.models import ColumnDataSource, CustomJS, HoverTool, Div
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 
 from scipy.spatial.transform import Rotation as R
-
 
 import numpy as np
 import copy
 import pymap3d as pm
 import math
 import itertools
-
 import os
 
 
 class GsofPlotGenerator:
+    # Plot dimensions
+    DEFAULT_WIDTH = 500
+    DEFAULT_HEIGHT = 250
+    SQUARE_PLOT_SIZE = 500
+    TALL_PLOT_HEIGHT = 600
+    EXTRA_TALL_PLOT_HEIGHT = 400
+    
+    # Constellation mapping
+    CONSTELLATION_IDS = ["0", "2", "3", "5"]
+    CONSTELLATION_NAMES = ["GPS", "GLONASS", "Galileo", "BeiDou"]
+    
+    # Sky plot parameters
+    SKY_PLOT_SIZE = 600
+    HORIZON_RADIUS = 90
+    ELEVATION_CIRCLES = [0, 15, 30, 45, 60, 75]
+    AZIMUTH_LINES = list(range(0, 361, 30))
 
     def __init__(self, data_parser) -> None:
         self.data_parser = data_parser
@@ -57,7 +70,10 @@ class GsofPlotGenerator:
         return n_m, e_m, d_m
 
 
-    def create_bokeh_figure(self, title, x_label, y_label, width=500, height=250):
+    def create_bokeh_figure(self, title, x_label, y_label, width=None, height=None):
+        width = width or self.DEFAULT_WIDTH
+        height = height or self.DEFAULT_HEIGHT
+        
         p = figure(max_width=width, height=height,
                             title=title,
                             tools="pan,wheel_zoom,box_zoom,reset,save",
@@ -86,7 +102,7 @@ class GsofPlotGenerator:
 
         output_file(filename=output_file_name, title="PVT Plots")
 
-        ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=500, height=500)
+        ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=self.SQUARE_PLOT_SIZE, height=self.SQUARE_PLOT_SIZE)
 
         x_plot = self.create_bokeh_figure("North Position", "Timestamp", "X [m]")
         y_plot = self.create_bokeh_figure("East Position", "Timestamp", "Y [m]")
@@ -204,13 +220,13 @@ class GsofPlotGenerator:
 
         num_of_svs_plot = self.create_bokeh_figure("Number of Satellites Used", "Timestamp", "Num")
         init_num_plot = self.create_bokeh_figure("Number of Inits", "Timestamp", "Num")
-        position_flags_1_plot = self.create_bokeh_figure("Position Flags 1", "Timestamp", "Bool", height=400)
-        position_flags_2_plot = self.create_bokeh_figure("Position Flags 2", "Timestamp", "Bool", height=400)
+        position_flags_1_plot = self.create_bokeh_figure("Position Flags 1", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
+        position_flags_2_plot = self.create_bokeh_figure("Position Flags 2", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
 
         network_solution_plot = self.create_bokeh_figure("Network Solution", "Timestamp", "Bool")
         correction_age_plot = self.create_bokeh_figure("Correction Age", "Timestamp", "Age [s]")
         rtk_fix_plot = self.create_bokeh_figure("RTK Fix", "Timestamp", "Bool")
-        rtk_condition_plot = self.create_bokeh_figure("RTK Condition", "Timestamp", "Bool", height=400)
+        rtk_condition_plot = self.create_bokeh_figure("RTK Condition", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
         position_fix_type_plot = self.create_bokeh_figure("Position Fix Type", "Timestamp", "Fix Type")
 
         base_valid_plot = self.create_bokeh_figure("Reference Station Valid", "Timestamp", "Bool")
@@ -405,20 +421,17 @@ class GsofPlotGenerator:
     def generate_sky_plots(self, output_file_name):
 
         output_file(filename=output_file_name, title="IMU Plots")
-            
-        constellation_ids = ["0", "2", "3", "5"]
-        constellation_names = ["GPS", "GLONASS", "Galileo", "BeiDou"]
 
         plts = []
 
-        for i in range(len(constellation_ids)):
+        for i in range(len(self.CONSTELLATION_IDS)):
 
             p = figure(
-                title=constellation_names[i] + " Sky Plot",
-                width=600,
-                height=600,
-                x_range=(-90, 90),
-                y_range=(-90, 90),
+                title=self.CONSTELLATION_NAMES[i] + " Sky Plot",
+                width=self.SKY_PLOT_SIZE,
+                height=self.SKY_PLOT_SIZE,
+                x_range=(-self.HORIZON_RADIUS, self.HORIZON_RADIUS),
+                y_range=(-self.HORIZON_RADIUS, self.HORIZON_RADIUS),
                 x_axis_type=None,
                 y_axis_type=None,
                 match_aspect=True,
@@ -431,16 +444,16 @@ class GsofPlotGenerator:
             p.circle(
                 x=[0],
                 y=[0],
-                radius=90,
+                radius=self.HORIZON_RADIUS,
                 fill_alpha=0.0,
                 line_color="black",
                 line_dash="dashed",
             )
 
             # Draw elevation circles
-            for elev_line in [0, 15, 30, 45, 60, 75]:
+            for elev_line in self.ELEVATION_CIRCLES:
                 # Convert elevation to radial distance
-                r = 90 - elev_line
+                r = self.HORIZON_RADIUS - elev_line
 
                 p.circle(
                     x=[0],
@@ -463,12 +476,12 @@ class GsofPlotGenerator:
             
 
             # Draw radial lines every 30 degrees
-            for az_line in range(0, 361, 30):
+            for az_line in self.AZIMUTH_LINES:
                 # Convert az_line (in degrees) to radians
                 theta = math.radians(az_line)
 
                 # We'll draw from the center (0, 0) out to the edge at r=90 (the horizon)
-                r = 90
+                r = self.HORIZON_RADIUS
 
                 # Convert polar -> Cartesian
                 x_end = r * math.sin(theta)
@@ -497,7 +510,7 @@ class GsofPlotGenerator:
                     text_font_size="16pt",
                 )
 
-            for sat_name, sat_info in self.data_parser.gnss_data[constellation_ids[i]].items():
+            for sat_name, sat_info in self.data_parser.gnss_data[self.CONSTELLATION_IDS[i]].items():
 
                 az = np.array(sat_info["azimuth"])
                 el = np.array(sat_info["elevation"])
@@ -508,7 +521,7 @@ class GsofPlotGenerator:
                 # Convert to radians
                 theta = np.deg2rad(az)
                 # Convert elevation -> r (0 at zenith, 90 at horizon)
-                r = 90 - el
+                r = self.HORIZON_RADIUS - el
 
                 x = r * np.sin(theta)
                 y = r * np.cos(theta)
@@ -559,8 +572,6 @@ class GsofPlotGenerator:
 
     def generate_dop_plots(self, output_file_name):
         output_file(filename=output_file_name, title="DOP Plots")
-
-        a = 1
 
         hdop = self.data_parser.pdop_info["hdop"]
         vdop = self.data_parser.pdop_info["vdop"]
@@ -636,16 +647,13 @@ class GsofPlotGenerator:
     def generate_satellite_plots(self, output_file_name):
         output_file(filename=output_file_name, title="Satellite Plots")
 
-        p_num_sat = self.create_bokeh_figure("Number of Satellites", "Timestamp", "Num", height=600)
+        p_num_sat = self.create_bokeh_figure("Number of Satellites", "Timestamp", "Num", height=self.TALL_PLOT_HEIGHT)
         num_sat = self.data_parser.gnss_data["num_of_sat"]
         num_sat_timestamp = np.arange(len(num_sat))
         p_num_sat.line(num_sat_timestamp, num_sat, alpha=0.8, color="blue", line_width=2, legend_label="")
 
         p_num_sat.legend.location = "top_right"
         p_num_sat.legend.click_policy = "hide"
-
-        constellation_ids = ["0", "2", "3", "5"]
-        constellation_names = ["GPS", "GLONASS", "Galileo", "BeiDou"]
 
         azimuth_plts = []
         elevation_plts = []
@@ -655,21 +663,21 @@ class GsofPlotGenerator:
         used_in_position_plts = []
         used_in_rtk_plts = []
 
-        for i in range(len(constellation_ids)):
+        for i in range(len(self.CONSTELLATION_IDS)):
 
-            p_az = self.create_bokeh_figure(constellation_names[i] + " Azimuth", "Timestamp", "Azimuth [deg]", height=600)
-            p_el = self.create_bokeh_figure(constellation_names[i] + " Elevation", "Timestamp", "Elevation [deg]", height=600)
+            p_az = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " Azimuth", "Timestamp", "Azimuth [deg]", height=self.TALL_PLOT_HEIGHT)
+            p_el = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " Elevation", "Timestamp", "Elevation [deg]", height=self.TALL_PLOT_HEIGHT)
 
-            p_snr_l1 = self.create_bokeh_figure(constellation_names[i] + " SNR L1", "Timestamp", "[dB]", height=600)
-            p_snr_l2 = self.create_bokeh_figure(constellation_names[i] + " SNR L2", "Timestamp", "[dB]", height=600)
-            p_snr_l5 = self.create_bokeh_figure(constellation_names[i] + " SNR L5", "Timestamp", "[dB]", height=600)
+            p_snr_l1 = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " SNR L1", "Timestamp", "[dB]", height=self.TALL_PLOT_HEIGHT)
+            p_snr_l2 = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " SNR L2", "Timestamp", "[dB]", height=self.TALL_PLOT_HEIGHT)
+            p_snr_l5 = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " SNR L5", "Timestamp", "[dB]", height=self.TALL_PLOT_HEIGHT)
             
-            p_pos = self.create_bokeh_figure(constellation_names[i] + " Pos", "Timestamp", "Used [bool]", height=600)
-            p_rtk = self.create_bokeh_figure(constellation_names[i] + " RTK", "Timestamp", "Used [bool]", height=600)
+            p_pos = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " Pos", "Timestamp", "Used [bool]", height=self.TALL_PLOT_HEIGHT)
+            p_rtk = self.create_bokeh_figure(self.CONSTELLATION_NAMES[i] + " RTK", "Timestamp", "Used [bool]", height=self.TALL_PLOT_HEIGHT)
 
             line_colors = itertools.cycle(Category20[20])
 
-            for (sat_name, sat_data), color in zip(self.data_parser.gnss_data[constellation_ids[i]].items(), line_colors):
+            for (sat_name, sat_data), color in zip(self.data_parser.gnss_data[self.CONSTELLATION_IDS[i]].items(), line_colors):
 
                 azimuth = sat_data["azimuth"]
                 elevation = sat_data["elevation"]
@@ -824,7 +832,7 @@ class GsofPlotGenerator:
 
 
 
-        ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=500, height=500)
+        ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=self.SQUARE_PLOT_SIZE, height=self.SQUARE_PLOT_SIZE)
 
         x_plot = self.create_bokeh_figure("X Position", "Timestamp", "X [m]")
         y_plot = self.create_bokeh_figure("Y Position", "Timestamp", "Y [m]")
