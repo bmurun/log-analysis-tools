@@ -6,10 +6,16 @@ import multiprocessing
 from common.data_parser.gsof_data_parser import GsofDataParser
 from common.plot_utils.gsof_plot_generator import GsofPlotGenerator
 
-def process_mcap_file(file_path, output_fqp):
+def process_mcap_file(file_path, output_root_dir):
     file_name, ext = os.path.splitext(os.path.basename(file_path))
     click.echo(click.style(f"Processing mcap: {file_name + ext}", fg="green", bold=True))
 
+    output_fqp = os.path.join(output_root_dir, file_name)
+    output_fqp = os.path.join(output_fqp, "gsof_plots")
+
+    if not os.path.exists(output_fqp):
+        os.makedirs(output_fqp)
+    
     data_parser = GsofDataParser(file_path)
 
     pvt_plot_output_file_path = os.path.join(output_fqp, file_name + "_gsof_pvt_plots.html")
@@ -60,20 +66,20 @@ def generate_gsof_plots(log_path, dir_path, multiprocess=False):
 
     output_folder_name = "mcap_plots"
     dir_name = dir_path if dir_path else os.path.dirname(log_path)
-    output_fqp = os.path.join(dir_name, output_folder_name)
+    output_root_dir = os.path.join(dir_name, output_folder_name)
 
-    if not os.path.exists(output_fqp):
-        os.makedirs(output_fqp)
+    if not os.path.exists(output_root_dir):
+        os.makedirs(output_root_dir)
     
-    output_fqp = os.path.abspath(output_fqp)
+    output_root_dir = os.path.abspath(output_root_dir)
 
     if multiprocess:
         click.echo(click.style("Multiprocessing enabled!", fg="green", bold=True))
         with multiprocessing.Pool() as pool:
-            pool.starmap(process_mcap_file, [(fp, output_fqp) for fp in file_paths])
+            pool.starmap(process_mcap_file, [(fp, output_root_dir) for fp in file_paths])
     else:
         for file_path in file_paths:
-            process_mcap_file(file_path, output_fqp)
+            process_mcap_file(file_path, output_root_dir)
     
 if __name__ == "__main__":
     generate_gsof_plots()
