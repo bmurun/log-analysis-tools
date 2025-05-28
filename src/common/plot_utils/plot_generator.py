@@ -123,31 +123,56 @@ class PlotGenerator:
 
         output_file(filename=output_file_name, title="State Estimate Plots")
 
+        # Create hover tool for displaying (x, y) coordinates
+        hover = HoverTool(tooltips=[
+            ("Source", "@source"),
+            ("X", "@x"),
+            ("Y", "@y")
+        ])
+
         ne_plot = self.create_bokeh_figure("Northing-Easting", "Easting [m]", "Northing [m]", width=500, height=500)
+        ne_plot.add_tools(hover)
 
         x_plot = self.create_bokeh_figure("X Position", "Timestamp", "X [m]")
+        x_plot.add_tools(hover)
         y_plot = self.create_bokeh_figure("Y Position", "Timestamp", "Y [m]")
+        y_plot.add_tools(hover)
         z_plot = self.create_bokeh_figure("Z Position", "Timestamp", "Z [m]")
+        z_plot.add_tools(hover)
 
         x_stdev_plot = self.create_bokeh_figure("X Position Stdev", "Timestamp", "Stdev [m]")
+        x_stdev_plot.add_tools(hover)
         y_stdev_plot = self.create_bokeh_figure("Y Position Stdev", "Timestamp", "Stdev [m]")
+        y_stdev_plot.add_tools(hover)
         z_stdev_plot = self.create_bokeh_figure("Z Position Stdev", "Timestamp", "Stdev [m]")
+        z_stdev_plot.add_tools(hover)
 
         vx_plot = self.create_bokeh_figure("X Velocity", "Timestamp", "Vx [m]")
+        vx_plot.add_tools(hover)
         vy_plot = self.create_bokeh_figure("Y Velocity", "Timestamp", "Vy [m]")
+        vy_plot.add_tools(hover)
         vz_plot = self.create_bokeh_figure("Z Velocity", "Timestamp", "Vz [m]")
+        vz_plot.add_tools(hover)
 
         vx_stdev_plot = self.create_bokeh_figure("X Velocity Stdev", "Timestamp", "Stdev [m/s]")
+        vx_stdev_plot.add_tools(hover)
         vy_stdev_plot = self.create_bokeh_figure("Y Velocity Stdev", "Timestamp", "Stdev [m/s]")
+        vy_stdev_plot.add_tools(hover)
         vz_stdev_plot = self.create_bokeh_figure("Z Velocity Stdev", "Timestamp", "Stdev [m/s]")
+        vz_stdev_plot.add_tools(hover)
 
         roll_plot = self.create_bokeh_figure("Roll", "Timestamp", "Roll [deg]")
+        roll_plot.add_tools(hover)
         pitch_plot = self.create_bokeh_figure("Pitch", "Timestamp", "Pitch [deg]")
+        pitch_plot.add_tools(hover)
         yaw_plot = self.create_bokeh_figure("Yaw", "Timestamp", "Yaw [deg]")
+        yaw_plot.add_tools(hover)
 
         status_plot = self.create_bokeh_figure("Ego Indoors and GNSS Status", "Timestamp", "")
+        status_plot.add_tools(hover)
 
         localization_mode_plot = self.create_bokeh_figure("Localization Mode", "Timestamp", "Mode")
+        localization_mode_plot.add_tools(hover)
 
         is_input_odometry_available = False
         is_input_imu_available = False
@@ -469,150 +494,255 @@ class PlotGenerator:
 
         # ============== Odometry ================
         if is_input_odometry_available:
-            vx_plot.line(input_odometry_timestamp, input_odometry_twist_x, alpha=0.8, color="grey", line_width=2, legend_label="/input/odometry")
+            source = ColumnDataSource(data=dict(x=input_odometry_timestamp, y=input_odometry_twist_x, source=["/input/odometry"]*len(input_odometry_timestamp)))
+            vx_plot.line('x', 'y', source=source, alpha=0.8, color="grey", line_width=2, legend_label="/input/odometry")
 
         if is_input_imu_available:
-            roll_plot.line(input_imu_timestamp, input_imu_roll_deg, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
-            pitch_plot.line(input_imu_timestamp, input_imu_pitch_deg, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
-            yaw_plot.line(input_imu_timestamp, input_imu_yaw_deg, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
+            roll_source = ColumnDataSource(data=dict(x=input_imu_timestamp, y=input_imu_roll_deg, source=["/input/imu"]*len(input_imu_timestamp)))
+            pitch_source = ColumnDataSource(data=dict(x=input_imu_timestamp, y=input_imu_pitch_deg, source=["/input/imu"]*len(input_imu_timestamp)))
+            yaw_source = ColumnDataSource(data=dict(x=input_imu_timestamp, y=input_imu_yaw_deg, source=["/input/imu"]*len(input_imu_timestamp)))
+            
+            roll_plot.line('x', 'y', source=roll_source, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
+            pitch_plot.line('x', 'y', source=pitch_source, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
+            yaw_plot.line('x', 'y', source=yaw_source, alpha=0.8, color="grey", line_width=2, legend_label="/input/imu")
 
         # ============== GPS ==============
         if is_input_gnss_available:
 
-            ne_plot.circle(input_gnss_y, input_gnss_x, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
+            ne_source = ColumnDataSource(data=dict(x=input_gnss_y, y=input_gnss_x, source=["/input/gnss"]*len(input_gnss_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
 
-            # x_plot.line(input_gnss_timestamp, input_gnss_x - max_offset_x, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
-            # y_plot.line(input_gnss_timestamp, input_gnss_y - max_offset_y, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
-            # z_plot.line(input_gnss_timestamp, input_gnss_z - max_offset_z, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
+            x_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_x - max_offset_x, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_y - max_offset_y, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_z - max_offset_z, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            
+            x_plot.scatter('x', 'y', source=x_source, alpha=0.8, size=4, color="chartreuse", legend_label="/input/gnss")
+            y_plot.scatter('x', 'y', source=y_source, alpha=0.8, size=4, color="chartreuse", legend_label="/input/gnss")
+            z_plot.scatter('x', 'y', source=z_source, alpha=0.8, size=4, color="chartreuse", legend_label="/input/gnss")
 
-            x_plot.circle(input_gnss_timestamp, input_gnss_x - max_offset_x, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
-            y_plot.circle(input_gnss_timestamp, input_gnss_y - max_offset_y, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
-            z_plot.circle(input_gnss_timestamp, input_gnss_z - max_offset_z, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
-
-            x_stdev_plot.line(input_gnss_timestamp, input_gnss_x_stdev, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
-            y_stdev_plot.line(input_gnss_timestamp, input_gnss_y_stdev, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
-            z_stdev_plot.line(input_gnss_timestamp, input_gnss_z_stdev, alpha=0.8, color="chartreuse", line_width=2, 
+            x_stdev_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_x_stdev, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_y_stdev, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=input_gnss_timestamp, y=input_gnss_z_stdev, source=["/input/gnss"]*len(input_gnss_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="chartreuse", line_width=2, 
             legend_label="/input/gnss")
 
         if is_odometry_gps_available:
 
-            ne_plot.circle(odometry_gps_y, odometry_gps_x, alpha=0.8, radius=1, radius_units="screen", color="blueviolet", legend_label="/odometry/gps")
+            ne_source = ColumnDataSource(data=dict(x=odometry_gps_y, y=odometry_gps_x, source=["/odometry/gps"]*len(odometry_gps_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="blueviolet", legend_label="/odometry/gps")
 
-            x_plot.line(odometry_gps_timestamp, odometry_gps_x - max_offset_x, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
-            y_plot.line(odometry_gps_timestamp, odometry_gps_y - max_offset_y, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
-            z_plot.line(odometry_gps_timestamp, odometry_gps_z - max_offset_z, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
-            x_stdev_plot.line(odometry_gps_timestamp, odometry_gps_x_stdev, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
-            y_stdev_plot.line(odometry_gps_timestamp, odometry_gps_y_stdev, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
-            z_stdev_plot.line(odometry_gps_timestamp, odometry_gps_z_stdev, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            x_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_x - max_offset_x, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_y - max_offset_y, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_z - max_offset_z, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            
+            x_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_x_stdev, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_y_stdev, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_timestamp, y=odometry_gps_z_stdev, source=["/odometry/gps"]*len(odometry_gps_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
 
         if is_odometry_gps_raw_cov_available:
 
-            ne_plot.circle(odometry_gps_raw_cov_y, odometry_gps_raw_cov_x, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/odometry/gps_raw_cov")
+            ne_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_y, y=odometry_gps_raw_cov_x, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/odometry/gps_raw_cov")
 
-            x_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_x - max_offset_x, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
-            y_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_y - max_offset_y, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
-            z_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_z - max_offset_z, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
-            x_stdev_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_x_stdev, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
-            y_stdev_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_y_stdev, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
-            z_stdev_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_z_stdev, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")            
+            x_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_x - max_offset_x, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_y - max_offset_y, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_z - max_offset_z, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
+            
+            x_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_x_stdev, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_y_stdev, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=odometry_gps_raw_cov_timestamp, y=odometry_gps_raw_cov_z_stdev, source=["/odometry/gps_raw_cov"]*len(odometry_gps_raw_cov_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
 
         # ============== Pose in Map ==============
         if is_pose_in_map_available:
 
-            ne_plot.circle(pose_in_map_y, pose_in_map_x, alpha=0.8, radius=1, radius_units="screen", color="green", legend_label="/odometry/pose_in_map")
+            ne_source = ColumnDataSource(data=dict(x=pose_in_map_y, y=pose_in_map_x, source=["/odometry/pose_in_map"]*len(pose_in_map_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="green", legend_label="/odometry/pose_in_map")
 
-            x_plot.line(pose_in_map_timestamp, pose_in_map_x - max_offset_x, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
-            y_plot.line(pose_in_map_timestamp, pose_in_map_y - max_offset_y, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
-            z_plot.line(pose_in_map_timestamp, pose_in_map_z - max_offset_z, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
-            x_stdev_plot.line(pose_in_map_timestamp, pose_in_map_x_stdev, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
-            y_stdev_plot.line(pose_in_map_timestamp, pose_in_map_y_stdev, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
-            z_stdev_plot.line(pose_in_map_timestamp, pose_in_map_z_stdev, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            x_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_x - max_offset_x, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_y - max_offset_y, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_z - max_offset_z, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            
+            x_stdev_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_x_stdev, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_y_stdev, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=pose_in_map_timestamp, y=pose_in_map_z_stdev, source=["/odometry/pose_in_map"]*len(pose_in_map_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
 
         # ============== Cartographer ==============
         if is_cartographer_available:
 
-            ne_plot.circle(cartographer_y, cartographer_x, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/input/cartographer")
+            ne_source = ColumnDataSource(data=dict(x=cartographer_y, y=cartographer_x, source=["/input/cartographer"]*len(cartographer_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/input/cartographer")
 
-            x_plot.line(cartographer_timestamp, cartographer_x - max_offset_x, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
-            y_plot.line(cartographer_timestamp, cartographer_y - max_offset_y, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
-            z_plot.line(cartographer_timestamp, cartographer_z - max_offset_z, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            x_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_x - max_offset_x, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_y - max_offset_y, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_z - max_offset_z, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
 
-            roll_plot.line(cartographer_timestamp, cartographer_roll_deg, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
-            pitch_plot.line(cartographer_timestamp, cartographer_pitch_deg, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
-            yaw_plot.line(cartographer_timestamp, cartographer_yaw_deg, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            roll_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_roll_deg, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            pitch_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_pitch_deg, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            yaw_source = ColumnDataSource(data=dict(x=cartographer_timestamp, y=cartographer_yaw_deg, source=["/input/cartographer"]*len(cartographer_timestamp)))
+            
+            roll_plot.line('x', 'y', source=roll_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            pitch_plot.line('x', 'y', source=pitch_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
+            yaw_plot.line('x', 'y', source=yaw_source, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
 
         if is_tracked_pose_available:
 
-            ne_plot.circle(tracked_pose_y, tracked_pose_x, alpha=0.8, radius=1, radius_units="screen", color="maroon", legend_label="/tracked_pose")
+            ne_source = ColumnDataSource(data=dict(x=tracked_pose_y, y=tracked_pose_x, source=["/tracked_pose"]*len(tracked_pose_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="maroon", legend_label="/tracked_pose")
 
-            x_plot.line(tracked_pose_timestamp, tracked_pose_x - max_offset_x, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
-            y_plot.line(tracked_pose_timestamp, tracked_pose_y - max_offset_y, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
-            z_plot.line(tracked_pose_timestamp, tracked_pose_z - max_offset_z, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
+            x_source = ColumnDataSource(data=dict(x=tracked_pose_timestamp, y=tracked_pose_x - max_offset_x, source=["/tracked_pose"]*len(tracked_pose_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=tracked_pose_timestamp, y=tracked_pose_y - max_offset_y, source=["/tracked_pose"]*len(tracked_pose_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=tracked_pose_timestamp, y=tracked_pose_z - max_offset_z, source=["/tracked_pose"]*len(tracked_pose_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
 
         # ============== Replay EKF ==============
         if is_debug_ekf_available:
 
-            ne_plot.circle(debug_ekf_y, debug_ekf_x, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/debug/ekf")
+            ne_source = ColumnDataSource(data=dict(x=debug_ekf_y, y=debug_ekf_x, source=["/debug/ekf"]*len(debug_ekf_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/debug/ekf")
 
-            x_plot.line(debug_ekf_timestamp, debug_ekf_x - max_offset_x, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            y_plot.line(debug_ekf_timestamp, debug_ekf_y - max_offset_y, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            z_plot.line(debug_ekf_timestamp, debug_ekf_z - max_offset_z, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            x_stdev_plot.line(debug_ekf_timestamp, debug_ekf_x_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            y_stdev_plot.line(debug_ekf_timestamp, debug_ekf_y_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            z_stdev_plot.line(debug_ekf_timestamp, debug_ekf_z_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            x_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_x - max_offset_x, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_y - max_offset_y, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_z - max_offset_z, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            
+            x_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_x_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_y_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_z_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
 
-            vx_plot.line(debug_ekf_timestamp, debug_ekf_vx, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            vy_plot.line(debug_ekf_timestamp, debug_ekf_vy, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            vz_plot.line(debug_ekf_timestamp, debug_ekf_vz, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            vx_stdev_plot.line(debug_ekf_timestamp, debug_ekf_vx_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            vy_stdev_plot.line(debug_ekf_timestamp, debug_ekf_vy_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            vz_stdev_plot.line(debug_ekf_timestamp, debug_ekf_vz_stdev, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            vx_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vx, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            vy_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vy, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            vz_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vz, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            
+            vx_plot.line('x', 'y', source=vx_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            vy_plot.line('x', 'y', source=vy_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            vz_plot.line('x', 'y', source=vz_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            
+            vx_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vx_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            vy_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vy_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            vz_stdev_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_vz_stdev, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            
+            vx_stdev_plot.line('x', 'y', source=vx_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            vy_stdev_plot.line('x', 'y', source=vy_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            vz_stdev_plot.line('x', 'y', source=vz_stdev_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
 
-            roll_plot.line(debug_ekf_timestamp, debug_ekf_roll_deg, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            pitch_plot.line(debug_ekf_timestamp, debug_ekf_pitch_deg, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
-            yaw_plot.line(debug_ekf_timestamp, debug_ekf_yaw_deg, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            roll_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_roll_deg, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            pitch_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_pitch_deg, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            yaw_source = ColumnDataSource(data=dict(x=debug_ekf_timestamp, y=debug_ekf_yaw_deg, source=["/debug/ekf"]*len(debug_ekf_timestamp)))
+            
+            roll_plot.line('x', 'y', source=roll_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            pitch_plot.line('x', 'y', source=pitch_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
+            yaw_plot.line('x', 'y', source=yaw_source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
 
         # ============== Online EKF ==============
         if is_ekf_available:
-            ne_plot.circle(ekf_y, ekf_x, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/ekf")
+            ne_source = ColumnDataSource(data=dict(x=ekf_y, y=ekf_x, source=["/ekf"]*len(ekf_y)))
+            ne_plot.circle('x', 'y', source=ne_source, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/ekf")
 
-            x_plot.line(ekf_timestamp, ekf_x - max_offset_x, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            y_plot.line(ekf_timestamp, ekf_y - max_offset_y, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            z_plot.line(ekf_timestamp, ekf_z - max_offset_z, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            x_stdev_plot.line(ekf_timestamp, ekf_x_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            y_stdev_plot.line(ekf_timestamp, ekf_y_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            z_stdev_plot.line(ekf_timestamp, ekf_z_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            x_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_x - max_offset_x, source=["/ekf"]*len(ekf_timestamp)))
+            y_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_y - max_offset_y, source=["/ekf"]*len(ekf_timestamp)))
+            z_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_z - max_offset_z, source=["/ekf"]*len(ekf_timestamp)))
+            
+            x_plot.line('x', 'y', source=x_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            y_plot.line('x', 'y', source=y_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            z_plot.line('x', 'y', source=z_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            
+            x_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_x_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            y_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_y_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            z_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_z_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            
+            x_stdev_plot.line('x', 'y', source=x_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            y_stdev_plot.line('x', 'y', source=y_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            z_stdev_plot.line('x', 'y', source=z_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
 
-            vx_plot.line(ekf_timestamp, ekf_vx, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            vy_plot.line(ekf_timestamp, ekf_vy, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            vz_plot.line(ekf_timestamp, ekf_vz, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            vx_stdev_plot.line(ekf_timestamp, ekf_vx_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            vy_stdev_plot.line(ekf_timestamp, ekf_vy_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            vz_stdev_plot.line(ekf_timestamp, ekf_vz_stdev, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            vx_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vx, source=["/ekf"]*len(ekf_timestamp)))
+            vy_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vy, source=["/ekf"]*len(ekf_timestamp)))
+            vz_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vz, source=["/ekf"]*len(ekf_timestamp)))
+            
+            vx_plot.line('x', 'y', source=vx_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            vy_plot.line('x', 'y', source=vy_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            vz_plot.line('x', 'y', source=vz_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            
+            vx_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vx_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            vy_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vy_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            vz_stdev_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_vz_stdev, source=["/ekf"]*len(ekf_timestamp)))
+            
+            vx_stdev_plot.line('x', 'y', source=vx_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            vy_stdev_plot.line('x', 'y', source=vy_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            vz_stdev_plot.line('x', 'y', source=vz_stdev_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
 
-            roll_plot.line(ekf_timestamp, ekf_roll_deg, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            pitch_plot.line(ekf_timestamp, ekf_pitch_deg, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-            yaw_plot.line(ekf_timestamp, ekf_yaw_deg, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
-
+            roll_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_roll_deg, source=["/ekf"]*len(ekf_timestamp)))
+            pitch_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_pitch_deg, source=["/ekf"]*len(ekf_timestamp)))
+            yaw_source = ColumnDataSource(data=dict(x=ekf_timestamp, y=ekf_yaw_deg, source=["/ekf"]*len(ekf_timestamp)))
+            
+            roll_plot.line('x', 'y', source=roll_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            pitch_plot.line('x', 'y', source=pitch_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
+            yaw_plot.line('x', 'y', source=yaw_source, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
 
         # ============== Misc ==============
         if is_debug_ekf_is_ego_indoors_available:
-            status_plot.line(debug_ekf_is_ego_indoors_timestamp, debug_ekf_is_ego_indoors_flag, alpha=0.8, color="orange", line_width=2, legend_label="/debug/is_ekf_indoors")
+            source = ColumnDataSource(data=dict(x=debug_ekf_is_ego_indoors_timestamp, y=debug_ekf_is_ego_indoors_flag, source=["/debug/is_ekf_indoors"]*len(debug_ekf_is_ego_indoors_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="orange", line_width=2, legend_label="/debug/is_ekf_indoors")
 
         if is_ekf_is_ego_indoors_available:
-            status_plot.line(ekf_is_ego_indoors_timestamp, ekf_is_ego_indoors_flag, alpha=0.8, color="cyan", line_width=2, legend_label="/is_ekf_indoors")
+            source = ColumnDataSource(data=dict(x=ekf_is_ego_indoors_timestamp, y=ekf_is_ego_indoors_flag, source=["/is_ekf_indoors"]*len(ekf_is_ego_indoors_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="cyan", line_width=2, legend_label="/is_ekf_indoors")
 
         if is_ins_solution_49_available:
-            status_plot.line(ins_solution_49_timestamp, ins_solution_49_gnss_status, alpha=0.8, color="blue", line_width=2, legend_label="/gnss_status")
+            source = ColumnDataSource(data=dict(x=ins_solution_49_timestamp, y=ins_solution_49_gnss_status, source=["/gnss_status"]*len(ins_solution_49_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="blue", line_width=2, legend_label="/gnss_status")
 
         if is_cartographer_convergence_status_available:
-            status_plot.line(cartographer_convergence_status_timestamp, is_cartographer_reliable, alpha=0.8, color="red", line_width=2, legend_label="/cartographer_convergence_status")
+            source = ColumnDataSource(data=dict(x=cartographer_convergence_status_timestamp, y=is_cartographer_reliable, source=["/cartographer_convergence_status"]*len(cartographer_convergence_status_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="red", line_width=2, legend_label="/cartographer_convergence_status")
 
         if is_test_available:
-            status_plot.line(test_cartographer_convergence_status_from_gnss_timestamp, test_cartographer_convergence_status_from_gnss_is_reliable, alpha=0.8, color="purple", line_width=2, legend_label="/gnss_cartographer_convergence_status")
+            source = ColumnDataSource(data=dict(x=test_cartographer_convergence_status_from_gnss_timestamp, y=test_cartographer_convergence_status_from_gnss_is_reliable, source=["/gnss_cartographer_convergence_status"]*len(test_cartographer_convergence_status_from_gnss_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="purple", line_width=2, legend_label="/gnss_cartographer_convergence_status")
 
         if is_localization_mode_available:
-            localization_mode_plot.line(localization_mode_timestamp, localization_mode_mode, alpha=0.8, color="blue", line_width=2, legend_label="/localization_mode")
+            source = ColumnDataSource(data=dict(x=localization_mode_timestamp, y=localization_mode_mode, source=["/localization_mode"]*len(localization_mode_timestamp)))
+            localization_mode_plot.line('x', 'y', source=source, alpha=0.8, color="blue", line_width=2, legend_label="/localization_mode")
 
         # Post mumbo jumbo 
 
