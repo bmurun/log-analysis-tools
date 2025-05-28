@@ -170,26 +170,26 @@ class GsofPlotGenerator:
             ins_solution_timestamp -= ins_solution_timestamp[0]
         
 
-        ne_plot.circle(ins_solution_east, ins_solution_north, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+        ne_plot.scatter(ins_solution_east, ins_solution_north, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        x_plot.circle(ins_solution_timestamp, ins_solution_north, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+        x_plot.scatter(ins_solution_timestamp, ins_solution_north, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        y_plot.circle(ins_solution_timestamp, ins_solution_east, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+        y_plot.scatter(ins_solution_timestamp, ins_solution_east, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        z_plot.circle(ins_solution_timestamp, ins_solution_down, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+        z_plot.scatter(ins_solution_timestamp, ins_solution_down, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        gnss_status_plot.circle(ins_solution_timestamp, ins_solution_gnss_status, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/gsof/ins_solution")
+        gnss_status_plot.scatter(ins_solution_timestamp, ins_solution_gnss_status, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
         if (is_code_pvt_available):
-            ne_plot.circle(code_lat_long_east, code_lat_long_north, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+            ne_plot.scatter(code_lat_long_east, code_lat_long_north, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
         
-            x_plot.circle(code_lat_long_ht_timestamp, code_lat_long_north, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+            x_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_north, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            y_plot.circle(code_lat_long_ht_timestamp, code_lat_long_east, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+            y_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_east, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            z_plot.circle(code_lat_long_ht_timestamp, code_lat_long_down, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+            z_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_down, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            gnss_status_plot.circle(code_lat_long_ht_timestamp, code_lat_lon_position_type, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/gsof/code_lat_lon_ht")
+            gnss_status_plot.scatter(code_lat_long_ht_timestamp, code_lat_lon_position_type, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
 
         ne_plot.legend.location = "top_right"
@@ -238,6 +238,9 @@ class GsofPlotGenerator:
         base_north_plot = self.create_bokeh_figure("Reference Station North", "Timestamp", "North [m]")
         base_east_plot = self.create_bokeh_figure("Reference Station East", "Timestamp", "East [m]")
         base_down_plot = self.create_bokeh_figure("Reference Station Down", "Timestamp", "Down [m]")
+
+        # Create a second altitude plot to avoid repeated layout child error
+        base_alt_plot2 = self.create_bokeh_figure("Reference Station Altitude WGS84", "Timestamp", "Altitude [m]")
 
         is_position_time_info_available = False
         is_position_type_info_available = False
@@ -367,6 +370,8 @@ class GsofPlotGenerator:
 
             base_down_plot.line(received_base_info_timestamp, base_down_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
 
+            # Add the same data to the second altitude plot
+            base_alt_plot2.line(received_base_info_timestamp, base_height_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
 
         num_of_svs_plot.legend.location = "top_right"
         num_of_svs_plot.legend.click_policy = "hide"  
@@ -404,6 +409,10 @@ class GsofPlotGenerator:
         base_down_plot.legend.location = "top_right"
         base_down_plot.legend.click_policy = "hide" 
 
+        # Set legend for the second altitude plot
+        base_alt_plot2.legend.location = "top_right"
+        base_alt_plot2.legend.click_policy = "hide"
+
         save(gridplot([
             [Div(text="<h1 style='margin-left: 2em;'>Position Time Info (1)</h1>")],
             [num_of_svs_plot, init_num_plot],
@@ -414,7 +423,7 @@ class GsofPlotGenerator:
             [correction_age_plot, position_fix_type_plot],
             [Div(text="<h1 style='margin-left: 2em;'>Reference Station (35)</h1>")],
             [base_valid_plot, base_id_plot, base_alt_plot],
-            [base_lat_plot, base_lon_plot, base_alt_plot],
+            [base_lat_plot, base_lon_plot, base_alt_plot2],
             [base_north_plot, base_east_plot, base_down_plot],
         ]))
 
@@ -547,7 +556,7 @@ class GsofPlotGenerator:
                 p.line(x="x", y="y", line_width=2, source=source, color="gray", alpha=0.5)
 
                 # Scatter points for each satellite
-                p.circle(x="x", y="y", size="size", alpha=0.8, source=source, color="blue")
+                p.scatter(x="x", y="y", size="size", alpha=0.8, source=source, color="blue")
 
                 x_label = x[-1]
                 y_label = y[-1]
@@ -1188,15 +1197,15 @@ class GsofPlotGenerator:
         # ============== GPS ==============
         if is_input_gnss_available:
 
-            ne_plot.circle(input_gnss_y, input_gnss_x, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
+            ne_plot.scatter(input_gnss_y, input_gnss_x, alpha=0.8, size=2.5, color="chartreuse", legend_label="/input/gnss")
 
             # x_plot.line(input_gnss_timestamp, input_gnss_x - max_offset_x, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
             # y_plot.line(input_gnss_timestamp, input_gnss_y - max_offset_y, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
             # z_plot.line(input_gnss_timestamp, input_gnss_z - max_offset_z, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
 
-            x_plot.circle(input_gnss_timestamp, input_gnss_x - max_offset_x, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
-            y_plot.circle(input_gnss_timestamp, input_gnss_y - max_offset_y, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
-            z_plot.circle(input_gnss_timestamp, input_gnss_z - max_offset_z, alpha=0.8, radius=1, radius_units="screen", color="chartreuse", legend_label="/input/gnss")
+            x_plot.scatter(input_gnss_timestamp, input_gnss_x - max_offset_x, alpha=0.8, size=2.5, color="chartreuse", legend_label="/input/gnss")
+            y_plot.scatter(input_gnss_timestamp, input_gnss_y - max_offset_y, alpha=0.8, size=2.5, color="chartreuse", legend_label="/input/gnss")
+            z_plot.scatter(input_gnss_timestamp, input_gnss_z - max_offset_z, alpha=0.8, size=2.5, color="chartreuse", legend_label="/input/gnss")
 
             x_stdev_plot.line(input_gnss_timestamp, input_gnss_x_stdev, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
             y_stdev_plot.line(input_gnss_timestamp, input_gnss_y_stdev, alpha=0.8, color="chartreuse", line_width=2, legend_label="/input/gnss")
@@ -1205,7 +1214,7 @@ class GsofPlotGenerator:
 
         if is_odometry_gps_available:
 
-            ne_plot.circle(odometry_gps_y, odometry_gps_x, alpha=0.8, radius=1, radius_units="screen", color="blueviolet", legend_label="/odometry/gps")
+            ne_plot.scatter(odometry_gps_y, odometry_gps_x, alpha=0.8, size=2.5, color="blueviolet", legend_label="/odometry/gps")
 
             x_plot.line(odometry_gps_timestamp, odometry_gps_x - max_offset_x, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
             y_plot.line(odometry_gps_timestamp, odometry_gps_y - max_offset_y, alpha=0.8, color="blueviolet", line_width=2, legend_label="/odometry/gps")
@@ -1216,7 +1225,7 @@ class GsofPlotGenerator:
 
         if is_odometry_gps_raw_cov_available:
 
-            ne_plot.circle(odometry_gps_raw_cov_y, odometry_gps_raw_cov_x, alpha=0.8, radius=1, radius_units="screen", color="blue", legend_label="/odometry/gps_raw_cov")
+            ne_plot.scatter(odometry_gps_raw_cov_y, odometry_gps_raw_cov_x, alpha=0.8, size=2.5, color="blue", legend_label="/odometry/gps_raw_cov")
 
             x_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_x - max_offset_x, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
             y_plot.line(odometry_gps_raw_cov_timestamp, odometry_gps_raw_cov_y - max_offset_y, alpha=0.8, color="blue", line_width=2, legend_label="/odometry/gps_raw_cov")
@@ -1228,7 +1237,7 @@ class GsofPlotGenerator:
         # ============== Pose in Map ==============
         if is_pose_in_map_available:
 
-            ne_plot.circle(pose_in_map_y, pose_in_map_x, alpha=0.8, radius=1, radius_units="screen", color="green", legend_label="/odometry/pose_in_map")
+            ne_plot.scatter(pose_in_map_y, pose_in_map_x, alpha=0.8, size=2.5, color="green", legend_label="/odometry/pose_in_map")
 
             x_plot.line(pose_in_map_timestamp, pose_in_map_x - max_offset_x, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
             y_plot.line(pose_in_map_timestamp, pose_in_map_y - max_offset_y, alpha=0.8, color="green", line_width=2, legend_label="/odometry/pose_in_map")
@@ -1240,7 +1249,7 @@ class GsofPlotGenerator:
         # ============== Cartographer ==============
         if is_cartographer_available:
 
-            ne_plot.circle(cartographer_y, cartographer_x, alpha=0.8, radius=1, radius_units="screen", color="red", legend_label="/input/cartographer")
+            ne_plot.scatter(cartographer_y, cartographer_x, alpha=0.8, size=2.5, color="red", legend_label="/input/cartographer")
 
             x_plot.line(cartographer_timestamp, cartographer_x - max_offset_x, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
             y_plot.line(cartographer_timestamp, cartographer_y - max_offset_y, alpha=0.8, color="red", line_width=2, legend_label="/input/cartographer")
@@ -1252,7 +1261,7 @@ class GsofPlotGenerator:
 
         if is_tracked_pose_available:
 
-            ne_plot.circle(tracked_pose_y, tracked_pose_x, alpha=0.8, radius=1, radius_units="screen", color="maroon", legend_label="/tracked_pose")
+            ne_plot.scatter(tracked_pose_y, tracked_pose_x, alpha=0.8, size=2.5, color="maroon", legend_label="/tracked_pose")
 
             x_plot.line(tracked_pose_timestamp, tracked_pose_x - max_offset_x, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
             y_plot.line(tracked_pose_timestamp, tracked_pose_y - max_offset_y, alpha=0.8, color="maroon", line_width=2, legend_label="/tracked_pose")
@@ -1261,7 +1270,7 @@ class GsofPlotGenerator:
         # ============== Replay EKF ==============
         if is_debug_ekf_available:
 
-            ne_plot.circle(debug_ekf_y, debug_ekf_x, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/debug/ekf")
+            ne_plot.scatter(debug_ekf_y, debug_ekf_x, alpha=0.8, size=2.5, color="orange", legend_label="/debug/ekf")
 
             x_plot.line(debug_ekf_timestamp, debug_ekf_x - max_offset_x, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
             y_plot.line(debug_ekf_timestamp, debug_ekf_y - max_offset_y, alpha=0.8, color="orange", line_width=2, legend_label="/debug/ekf")
@@ -1283,7 +1292,7 @@ class GsofPlotGenerator:
 
         # ============== Online EKF ==============
         if is_ekf_available:
-            ne_plot.circle(ekf_y, ekf_x, alpha=0.8, radius=1, radius_units="screen", color="orange", legend_label="/ekf")
+            ne_plot.scatter(ekf_y, ekf_x, alpha=0.8, size=2.5, color="cyan", legend_label="/ekf")
 
             x_plot.line(ekf_timestamp, ekf_x - max_offset_x, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")
             y_plot.line(ekf_timestamp, ekf_y - max_offset_y, alpha=0.8, color="cyan", line_width=2, legend_label="/ekf")

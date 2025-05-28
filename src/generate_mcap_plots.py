@@ -23,8 +23,11 @@ def process_mcap_file(file_path, output_root_dir):
 
     plot_generator = PlotGenerator(data_parser)
     plot_generator.generate_state_plots(se_output_file_path)
-    # plot_generator.generate_imu_plots(imu_output_file_path)
-    # plot_generator.generate_nis_metrics_plots(nis_output_file_path)
+    plot_generator.generate_imu_plots(imu_output_file_path)
+    try:
+        plot_generator.generate_nis_metrics_plots(nis_output_file_path)
+    except:
+        pass
 
 @click.command()
 @click.option("-l", "--log-path", required=False, type=str, help="Path to .mcap")
