@@ -74,6 +74,13 @@ class GsofPlotGenerator:
         width = width or self.DEFAULT_WIDTH
         height = height or self.DEFAULT_HEIGHT
         
+        # Create hover tool for displaying (x, y) coordinates and source
+        hover = HoverTool(tooltips=[
+            ("Source", "@source"),
+            ("X", "@x"),
+            ("Y", "@y")
+        ])
+        
         p = figure(max_width=width, height=height,
                             title=title,
                             tools="pan,wheel_zoom,box_zoom,reset,save",
@@ -93,6 +100,7 @@ class GsofPlotGenerator:
             line_alpha=0.5,
         )
         p.add_tools(CrosshairTool(overlay=[w, h]))
+        p.add_tools(hover)
         p.xaxis.axis_label = x_label
         p.yaxis.axis_label = y_label
 
@@ -170,26 +178,38 @@ class GsofPlotGenerator:
             ins_solution_timestamp -= ins_solution_timestamp[0]
         
 
-        ne_plot.scatter(ins_solution_east, ins_solution_north, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+        # INS Solution plots with ColumnDataSource
+        ins_ne_source = ColumnDataSource(data=dict(x=ins_solution_east, y=ins_solution_north, source=["/gsof/ins_solution"]*len(ins_solution_east)))
+        ne_plot.scatter('x', 'y', source=ins_ne_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        x_plot.scatter(ins_solution_timestamp, ins_solution_north, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+        ins_x_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_north, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
+        x_plot.scatter('x', 'y', source=ins_x_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        y_plot.scatter(ins_solution_timestamp, ins_solution_east, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+        ins_y_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_east, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
+        y_plot.scatter('x', 'y', source=ins_y_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        z_plot.scatter(ins_solution_timestamp, ins_solution_down, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+        ins_z_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_down, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
+        z_plot.scatter('x', 'y', source=ins_z_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
-        gnss_status_plot.scatter(ins_solution_timestamp, ins_solution_gnss_status, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+        ins_status_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_gnss_status, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
+        gnss_status_plot.scatter('x', 'y', source=ins_status_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
         if (is_code_pvt_available):
-            ne_plot.scatter(code_lat_long_east, code_lat_long_north, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
+            # Code lat lon ht plots with ColumnDataSource
+            code_ne_source = ColumnDataSource(data=dict(x=code_lat_long_east, y=code_lat_long_north, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_east)))
+            ne_plot.scatter('x', 'y', source=code_ne_source, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
         
-            x_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_north, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
+            code_x_source = ColumnDataSource(data=dict(x=code_lat_long_ht_timestamp, y=code_lat_long_north, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_ht_timestamp)))
+            x_plot.scatter('x', 'y', source=code_x_source, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            y_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_east, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
+            code_y_source = ColumnDataSource(data=dict(x=code_lat_long_ht_timestamp, y=code_lat_long_east, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_ht_timestamp)))
+            y_plot.scatter('x', 'y', source=code_y_source, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            z_plot.scatter(code_lat_long_ht_timestamp, code_lat_long_down, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
+            code_z_source = ColumnDataSource(data=dict(x=code_lat_long_ht_timestamp, y=code_lat_long_down, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_ht_timestamp)))
+            z_plot.scatter('x', 'y', source=code_z_source, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
-            gnss_status_plot.scatter(code_lat_long_ht_timestamp, code_lat_lon_position_type, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
+            code_status_source = ColumnDataSource(data=dict(x=code_lat_long_ht_timestamp, y=code_lat_lon_position_type, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_ht_timestamp)))
+            gnss_status_plot.scatter('x', 'y', source=code_status_source, alpha=0.8, size=2.5, color="blue", legend_label="/gsof/code_lat_lon_ht")
 
 
         ne_plot.legend.location = "top_right"
@@ -315,25 +335,56 @@ class GsofPlotGenerator:
             is_received_base_info_available = True
 
         if (is_position_time_info_available):
+            # Position time info plots with ColumnDataSource
+            num_svs_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=position_time_info_num_svs, source=["/gsof/position_time_info"]*len(position_time_info_timestamp)))
+            num_of_svs_plot.line('x', 'y', source=num_svs_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
+            
+            init_num_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=position_time_info_init_num, source=["/gsof/position_time_info"]*len(position_time_info_timestamp)))
+            init_num_plot.line('x', 'y', source=init_num_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
 
-            num_of_svs_plot.line(position_time_info_timestamp, position_time_info_num_svs, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
-            init_num_plot.line(position_time_info_timestamp, position_time_info_init_num, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_time_info")
+            # Position flags 1 plots with ColumnDataSource
+            new_pos_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=new_position, source=["new_position"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=new_pos_source, alpha=0.8, color="blue", line_width=2, legend_label="new_position")
+            
+            clock_fix_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=clock_fix, source=["clock_fix"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=clock_fix_source, alpha=0.8, color="red", line_width=2, legend_label="clock_fix")
+            
+            horiz_coords_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=horizontal_coords, source=["horizontal_coords"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=horiz_coords_source, alpha=0.8, color="green", line_width=2, legend_label="horizontal_coords")
+            
+            height_calc_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=height_calculated, source=["height_calculated"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=height_calc_source, alpha=0.8, color="orange", line_width=2, legend_label="height_calculated")
+            
+            least_sq_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=least_squares, source=["least_squares"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=least_sq_source, alpha=0.8, color="purple", line_width=2, legend_label="least_squares")
+            
+            filtered_l1_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=filtered_L1, source=["filtered_L1"]*len(position_time_info_timestamp)))
+            position_flags_1_plot.line('x', 'y', source=filtered_l1_source, alpha=0.8, color="cyan", line_width=2, legend_label="filtered_L1")
 
-            position_flags_1_plot.line(position_time_info_timestamp, new_position, alpha=0.8, color="blue", line_width=2, legend_label="new_position")
-            position_flags_1_plot.line(position_time_info_timestamp, clock_fix, alpha=0.8, color="red", line_width=2, legend_label="clock_fix")
-            position_flags_1_plot.line(position_time_info_timestamp, horizontal_coords, alpha=0.8, color="green", line_width=2, legend_label="horizontal_coords")
-            position_flags_1_plot.line(position_time_info_timestamp, height_calculated, alpha=0.8, color="orange", line_width=2, legend_label="height_calculated")
-            position_flags_1_plot.line(position_time_info_timestamp, least_squares, alpha=0.8, color="purple", line_width=2, legend_label="least_squares")
-            position_flags_1_plot.line(position_time_info_timestamp, filtered_L1, alpha=0.8, color="cyan", line_width=2, legend_label="filtered_L1")
-
-            position_flags_2_plot.line(position_time_info_timestamp, is_differential, alpha=0.8, color="blue", line_width=2, legend_label="is_differential")
-            position_flags_2_plot.line(position_time_info_timestamp, uses_phase, alpha=0.8, color="red", line_width=2, legend_label="uses_phase")
-            position_flags_2_plot.line(position_time_info_timestamp, is_RTK_fixed, alpha=0.8, color="green", line_width=2, legend_label="is_RTK_fixed")
-            position_flags_2_plot.line(position_time_info_timestamp, omniSTAR, alpha=0.8, color="orange", line_width=2, legend_label="omniSTAR")
-            position_flags_2_plot.line(position_time_info_timestamp, static_constraint, alpha=0.8, color="purple", line_width=2, legend_label="static_constraint")
-            position_flags_2_plot.line(position_time_info_timestamp, network_RTK, alpha=0.8, color="cyan", line_width=2, legend_label="network_RTK")
-            position_flags_2_plot.line(position_time_info_timestamp, dithered_RTK, alpha=0.8, color="brown", line_width=2, legend_label="dithered_RTK")
-            position_flags_2_plot.line(position_time_info_timestamp, beacon_DGNSS, alpha=0.8, color="magenta", line_width=2, legend_label="beacon_DGNSS")
+            # Position flags 2 plots with ColumnDataSource
+            is_diff_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=is_differential, source=["is_differential"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=is_diff_source, alpha=0.8, color="blue", line_width=2, legend_label="is_differential")
+            
+            uses_phase_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=uses_phase, source=["uses_phase"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=uses_phase_source, alpha=0.8, color="red", line_width=2, legend_label="uses_phase")
+            
+            is_rtk_fixed_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=is_RTK_fixed, source=["is_RTK_fixed"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=is_rtk_fixed_source, alpha=0.8, color="green", line_width=2, legend_label="is_RTK_fixed")
+            
+            omnistar_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=omniSTAR, source=["omniSTAR"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=omnistar_source, alpha=0.8, color="orange", line_width=2, legend_label="omniSTAR")
+            
+            static_const_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=static_constraint, source=["static_constraint"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=static_const_source, alpha=0.8, color="purple", line_width=2, legend_label="static_constraint")
+            
+            network_rtk_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=network_RTK, source=["network_RTK"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=network_rtk_source, alpha=0.8, color="cyan", line_width=2, legend_label="network_RTK")
+            
+            dithered_rtk_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=dithered_RTK, source=["dithered_RTK"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=dithered_rtk_source, alpha=0.8, color="brown", line_width=2, legend_label="dithered_RTK")
+            
+            beacon_dgnss_source = ColumnDataSource(data=dict(x=position_time_info_timestamp, y=beacon_DGNSS, source=["beacon_DGNSS"]*len(position_time_info_timestamp)))
+            position_flags_2_plot.line('x', 'y', source=beacon_dgnss_source, alpha=0.8, color="magenta", line_width=2, legend_label="beacon_DGNSS")
 
 
         if (is_position_type_info_available):
@@ -590,8 +641,12 @@ class GsofPlotGenerator:
         p_hdop = self.create_bokeh_figure("HDOP", "Timestamp", "")
         p_vdop = self.create_bokeh_figure("VDOP", "Timestamp", "")
 
-        p_hdop.line(timestamp, hdop, alpha=0.8, color="blue", line_width=2, legend_label="pdop_info")
-        p_vdop.line(timestamp, vdop, alpha=0.8, color="blue", line_width=2, legend_label="pdop_info")
+        # DOP plots with ColumnDataSource
+        hdop_source = ColumnDataSource(data=dict(x=timestamp, y=hdop, source=["pdop_info"]*len(timestamp)))
+        p_hdop.line('x', 'y', source=hdop_source, alpha=0.8, color="blue", line_width=2, legend_label="pdop_info")
+        
+        vdop_source = ColumnDataSource(data=dict(x=timestamp, y=vdop, source=["pdop_info"]*len(timestamp)))
+        p_vdop.line('x', 'y', source=vdop_source, alpha=0.8, color="blue", line_width=2, legend_label="pdop_info")
 
         p_hdop.legend.location = "top_right"
         p_hdop.legend.click_policy = "hide"
@@ -612,25 +667,43 @@ class GsofPlotGenerator:
         first_ts = self.data_parser.ins_solution_rms["timestamp"][0]
         last_ts = self.data_parser.ins_solution_rms["timestamp"][-1]
 
-        p_north_stdev.line(self.data_parser.ins_solution_rms["timestamp"], self.data_parser.ins_solution_rms["north_stdev"], alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
-        p_east_stdev.line(self.data_parser.ins_solution_rms["timestamp"], self.data_parser.ins_solution_rms["east_stdev"], alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
-        p_down_stdev.line(self.data_parser.ins_solution_rms["timestamp"], self.data_parser.ins_solution_rms["down_stdev"], alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
+        # Noise plots with ColumnDataSource
+        ins_north_source = ColumnDataSource(data=dict(x=self.data_parser.ins_solution_rms["timestamp"], y=self.data_parser.ins_solution_rms["north_stdev"], source=["INSSolutionRms"]*len(self.data_parser.ins_solution_rms["timestamp"])))
+        p_north_stdev.line('x', 'y', source=ins_north_source, alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
+        
+        ins_east_source = ColumnDataSource(data=dict(x=self.data_parser.ins_solution_rms["timestamp"], y=self.data_parser.ins_solution_rms["east_stdev"], source=["INSSolutionRms"]*len(self.data_parser.ins_solution_rms["timestamp"])))
+        p_east_stdev.line('x', 'y', source=ins_east_source, alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
+        
+        ins_down_source = ColumnDataSource(data=dict(x=self.data_parser.ins_solution_rms["timestamp"], y=self.data_parser.ins_solution_rms["down_stdev"], source=["INSSolutionRms"]*len(self.data_parser.ins_solution_rms["timestamp"])))
+        p_down_stdev.line('x', 'y', source=ins_down_source, alpha=0.8, color="green", line_width=2, legend_label="INSSolutionRms")
 
         len_pos_sigma = len(self.data_parser.position_sigma["north_stdev"])
 
         self.data_parser.position_sigma["timestamp"] = np.linspace(first_ts, last_ts, len_pos_sigma)
 
-        p_north_stdev.line(self.data_parser.position_sigma["timestamp"], self.data_parser.position_sigma["north_stdev"], alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
-        p_east_stdev.line(self.data_parser.position_sigma["timestamp"], self.data_parser.position_sigma["east_stdev"], alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
-        p_down_stdev.line(self.data_parser.position_sigma["timestamp"], self.data_parser.position_sigma["down_stdev"], alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
+        # Position sigma plots with ColumnDataSource
+        pos_sigma_north_source = ColumnDataSource(data=dict(x=self.data_parser.position_sigma["timestamp"], y=self.data_parser.position_sigma["north_stdev"], source=["PositionSigma12"]*len(self.data_parser.position_sigma["timestamp"])))
+        p_north_stdev.line('x', 'y', source=pos_sigma_north_source, alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
+        
+        pos_sigma_east_source = ColumnDataSource(data=dict(x=self.data_parser.position_sigma["timestamp"], y=self.data_parser.position_sigma["east_stdev"], source=["PositionSigma12"]*len(self.data_parser.position_sigma["timestamp"])))
+        p_east_stdev.line('x', 'y', source=pos_sigma_east_source, alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
+        
+        pos_sigma_down_source = ColumnDataSource(data=dict(x=self.data_parser.position_sigma["timestamp"], y=self.data_parser.position_sigma["down_stdev"], source=["PositionSigma12"]*len(self.data_parser.position_sigma["timestamp"])))
+        p_down_stdev.line('x', 'y', source=pos_sigma_down_source, alpha=0.8, color="blue", line_width=2, legend_label="PositionSigma12")
 
         len_navsat = len(self.data_parser.navsat["north_stdev"])
 
         self.data_parser.navsat["timestamp"] = np.linspace(first_ts, last_ts, len_navsat)
 
-        p_north_stdev.line(self.data_parser.navsat["timestamp"], self.data_parser.navsat["north_stdev"], alpha=0.8, color="red", line_width=2, legend_label="NavSat")
-        p_east_stdev.line(self.data_parser.navsat["timestamp"], self.data_parser.navsat["east_stdev"], alpha=0.8, color="red", line_width=2, legend_label="NavSat")
-        p_down_stdev.line(self.data_parser.navsat["timestamp"], self.data_parser.navsat["down_stdev"], alpha=0.8, color="red", line_width=2, legend_label="NavSat")
+        # NavSat plots with ColumnDataSource
+        navsat_north_source = ColumnDataSource(data=dict(x=self.data_parser.navsat["timestamp"], y=self.data_parser.navsat["north_stdev"], source=["NavSat"]*len(self.data_parser.navsat["timestamp"])))
+        p_north_stdev.line('x', 'y', source=navsat_north_source, alpha=0.8, color="red", line_width=2, legend_label="NavSat")
+        
+        navsat_east_source = ColumnDataSource(data=dict(x=self.data_parser.navsat["timestamp"], y=self.data_parser.navsat["east_stdev"], source=["NavSat"]*len(self.data_parser.navsat["timestamp"])))
+        p_east_stdev.line('x', 'y', source=navsat_east_source, alpha=0.8, color="red", line_width=2, legend_label="NavSat")
+        
+        navsat_down_source = ColumnDataSource(data=dict(x=self.data_parser.navsat["timestamp"], y=self.data_parser.navsat["down_stdev"], source=["NavSat"]*len(self.data_parser.navsat["timestamp"])))
+        p_down_stdev.line('x', 'y', source=navsat_down_source, alpha=0.8, color="red", line_width=2, legend_label="NavSat")
 
         p_north_stdev.legend.location = "top_right"
         p_north_stdev.legend.click_policy = "hide"
@@ -641,11 +714,13 @@ class GsofPlotGenerator:
 
         p_gnss_status = self.create_bokeh_figure("GNSS Status", "Timestamp", "Status")
 
-        p_gnss_status.line(self.data_parser.ins_solution_rms["timestamp"], self.data_parser.ins_solution_rms["gnss_status"], alpha=0.8,  color="red", line_width=2, legend_label="INSSolutionRms")
+        gnss_status_rms_source = ColumnDataSource(data=dict(x=self.data_parser.ins_solution_rms["timestamp"], y=self.data_parser.ins_solution_rms["gnss_status"], source=["INSSolutionRms"]*len(self.data_parser.ins_solution_rms["timestamp"])))
+        p_gnss_status.line('x', 'y', source=gnss_status_rms_source, alpha=0.8, color="red", line_width=2, legend_label="INSSolutionRms")
 
         p_gnss_status_ins_solution = self.create_bokeh_figure("GNSS Status", "Timestamp", "Status")
 
-        p_gnss_status_ins_solution.line(self.data_parser.ins_solution["timestamp"], self.data_parser.ins_solution["gnss_status"], alpha=0.8,  color="red", line_width=2, legend_label="INSSolution")
+        gnss_status_ins_source = ColumnDataSource(data=dict(x=self.data_parser.ins_solution["timestamp"], y=self.data_parser.ins_solution["gnss_status"], source=["INSSolution"]*len(self.data_parser.ins_solution["timestamp"])))
+        p_gnss_status_ins_solution.line('x', 'y', source=gnss_status_ins_source, alpha=0.8, color="red", line_width=2, legend_label="INSSolution")
 
         save(gridplot([
             [p_north_stdev, p_east_stdev, p_down_stdev],
