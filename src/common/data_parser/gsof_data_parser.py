@@ -102,6 +102,19 @@ class GsofDataParser:
             "network_RTK": [],
             "dithered_RTK": [],
             "beacon_DGNSS": [],
+            "network_flags_new_base_station_available": [],
+            "network_flags_rtcm_not_available": [],
+            "network_flags_rtcm_not_full_cycle": [],
+            "network_flags_rtcm_insufficient": [],
+            "network_flags_rtcm_good": [],
+            "network_flags_outside_of_geofence": [],
+            "network_flags_outside_of_rtk_range_base": [],
+            "network_flags_xfill_operation": [],
+            "network_flags_rtx_position_flag": [],
+            "network_flags_rtx_xfill_is_down": [],
+            "network_flags2_xfill_ready": [],
+            "network_flags2_rtx_fast": [],
+            "network_flags2_rtx_offset": [],
         }
 
         self.position_type_info = {
@@ -118,7 +131,22 @@ class GsofDataParser:
             "rtk_cond_sol_res_rms_exceeds": [],
             "rtk_cond_pdop_exceeds": [],
             "correction_age": [],
-            "position_fix_type": []
+            "position_fix_type": [],
+            "network_flags_new_base_station_available": [],
+            "network_flags_rtcm_not_available": [],
+            "network_flags_rtcm_not_full_cycle": [],
+            "network_flags_rtcm_insufficient": [],
+            "network_flags_rtcm_good": [],
+            "network_flags_outside_of_geofence": [],
+            "network_flags_outside_of_rtk_range_base": [],
+            "network_flags_xfill_operation": [],
+            "network_flags_rtx_position_flag": [],
+            "network_flags_rtx_xfill_is_down": [],
+            "network_flags2_xfill_ready": [],
+            "network_flags2_rtx_fast": [],
+            "network_flags2_rtx_offset": [],
+            "network_flags2_cmrxe_received": [],
+            "network_flags2_rtx_wet_area": [],
         }
 
         self.code_lat_lon_ht = {
@@ -261,6 +289,7 @@ class GsofDataParser:
                     self.ins_solution_rms["gnss_status"].append(data.status.gnss)
 
                 elif topic_name == "/lvx_client/gsof/position_time_info_1":
+                    # https://receiverhelp.trimble.com/alloy-gnss/en-us/gsof-messages-flags.html#Position%20flags%201
                     # sec = data.header.stamp.sec
                     # nanosec = data.header.stamp.nanosec
                     # timestamp = sec + nanosec / 1e9
@@ -318,6 +347,7 @@ class GsofDataParser:
                     base_valid = bool(data.flags & (1 << 3))
                     self.received_base_info["base_valid"].append(base_valid)
                 elif topic_name == "/lvx_client/gsof/position_type_info_38":
+                    # https://receiverhelp.trimble.com/alloy-gnss/en-us/gsof-messages-position-type.html?tocpath=Output%20Messages%7CGSOF%20messages%7C_____24
                     sec = data.header.stamp.sec
                     nanosec = data.header.stamp.nanosec
                     timestamp = sec + nanosec / 1e9
@@ -339,6 +369,52 @@ class GsofDataParser:
 
                     self.position_type_info["correction_age"].append(data.correction_age)
                     self.position_type_info["position_fix_type"].append(data.position_fix_type)
+
+                    # Network Flags (Field 12) - Parse as bitmap
+                    network_flags = data.network_flags
+                    
+                    # Bit 0: New physical base station available
+                    self.position_type_info["network_flags_new_base_station_available"].append(bool(network_flags & (1 << 0)))
+                    
+                    # Bits 2,1: RTCM v3 Network messages status (4 combinations)
+                    rtcm_bits = (network_flags >> 1) & 0x03  # Extract bits 2,1
+                    self.position_type_info["network_flags_rtcm_not_available"].append(rtcm_bits == 0)      # 0,0
+                    self.position_type_info["network_flags_rtcm_not_full_cycle"].append(rtcm_bits == 1)    # 0,1  
+                    self.position_type_info["network_flags_rtcm_insufficient"].append(rtcm_bits == 2)      # 1,0
+                    self.position_type_info["network_flags_rtcm_good"].append(rtcm_bits == 3)              # 1,1
+                    
+                    # Bit 3: GeoFence option is enabled and unit is outside Geofence area
+                    self.position_type_info["network_flags_outside_of_geofence"].append(bool(network_flags & (1 << 3)))
+                    
+                    # Bit 4: RTK Range limiting is enabled and unit is too far from the base
+                    self.position_type_info["network_flags_outside_of_rtk_range_base"].append(bool(network_flags & (1 << 4)))
+                    
+                    # Bit 5: xFill operation
+                    self.position_type_info["network_flags_xfill_operation"].append(bool(network_flags & (1 << 5)))
+                    
+                    # Bit 6: RTX position flag. 1 = RTX position, 0 = Not RTX position
+                    self.position_type_info["network_flags_rtx_position_flag"].append(bool(network_flags & (1 << 6)))
+                    
+                    # Bit 7: RTX/xFill link is down. 1 = link is down, 0 = not applicable
+                    self.position_type_info["network_flags_rtx_xfill_is_down"].append(bool(network_flags & (1 << 7)))
+
+                    # Network Flags2 (Field 13) - Parse as bitmap
+                    network_flags2 = data.network_flags2
+                    
+                    # Bit 0: xFill is ready to propagate RTK positions (or is already running)
+                    self.position_type_info["network_flags2_xfill_ready"].append(bool(network_flags2 & (1 << 0)))
+                    
+                    # Bit 1: RTX solution is RTX Fast
+                    self.position_type_info["network_flags2_rtx_fast"].append(bool(network_flags2 & (1 << 1)))
+                    
+                    # Bit 2: xFill-RTX offset (from RTK) is known to an acceptable accuracy to propagate RTK
+                    self.position_type_info["network_flags2_rtx_offset"].append(bool(network_flags2 & (1 << 2)))
+                    
+                    # Bit 3: If set to 1, indicates that CMRxe is being received
+                    self.position_type_info["network_flags2_cmrxe_received"].append(bool(network_flags2 & (1 << 3)))
+                    
+                    # Bit 4: If set, indicates RTX is in a "wet" area
+                    self.position_type_info["network_flags2_rtx_wet_area"].append(bool(network_flags2 & (1 << 4)))
 
                 elif topic_name == "/lvx_client/gsof/code_lat_long_ht_62":
                     sec = data.header.stamp.sec

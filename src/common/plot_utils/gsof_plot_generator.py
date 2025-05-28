@@ -231,9 +231,6 @@ class GsofPlotGenerator:
             [gnss_status_plot]
         ]))
 
-        return
-
-    
     def generate_rtk_status_plots(self, output_file_name):
 
         output_file(filename=output_file_name, title="RTK Status")
@@ -246,8 +243,14 @@ class GsofPlotGenerator:
         network_solution_plot = self.create_bokeh_figure("Network Solution", "Timestamp", "Bool")
         correction_age_plot = self.create_bokeh_figure("Correction Age", "Timestamp", "Age [s]")
         rtk_fix_plot = self.create_bokeh_figure("RTK Fix", "Timestamp", "Bool")
+        init_integrity_plot = self.create_bokeh_figure("Init Integrity", "Timestamp", "Bool")
         rtk_condition_plot = self.create_bokeh_figure("RTK Condition", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
         position_fix_type_plot = self.create_bokeh_figure("Position Fix Type", "Timestamp", "Fix Type")
+
+        # Network flags plots
+        rtcm_status_plot = self.create_bokeh_figure("RTCM v3 Network Status", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
+        network_flags_plot = self.create_bokeh_figure("Network Flags", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
+        rtx_xfill_status_plot = self.create_bokeh_figure("RTX/xFill Status", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
 
         base_valid_plot = self.create_bokeh_figure("Reference Station Valid", "Timestamp", "Bool")
         base_id_plot = self.create_bokeh_figure("Reference Station ID", "Timestamp", "ID")
@@ -296,6 +299,8 @@ class GsofPlotGenerator:
             position_type_info_timestamp = position_type_info["timestamp"]
             position_type_info_is_network_solution = position_type_info["is_network_solution"]
             position_type_info_is_rtk_fix = position_type_info["is_rtk_fix"]
+            position_type_info_init_integrity_1 = position_type_info["init_integrity_1"]
+            position_type_info_init_integrity_2 = position_type_info["init_integrity_2"]
 
             position_type_info_correction_age = position_type_info["correction_age"]
             position_type_info_position_fix_type = position_type_info["position_fix_type"]
@@ -307,6 +312,25 @@ class GsofPlotGenerator:
             rtk_cond_failed_integer_ver_with_fix_sol = position_type_info["rtk_cond_failed_integer_ver_with_fix_sol"]
             rtk_cond_sol_res_rms_exceeds = position_type_info["rtk_cond_sol_res_rms_exceeds"]
             rtk_cond_pdop_exceeds = position_type_info["rtk_cond_pdop_exceeds"]
+
+            # Network flags data extraction
+            network_flags_new_base_station = position_type_info["network_flags_new_base_station_available"]
+            network_flags_rtcm_not_available = position_type_info["network_flags_rtcm_not_available"]
+            network_flags_rtcm_not_full_cycle = position_type_info["network_flags_rtcm_not_full_cycle"]
+            network_flags_rtcm_insufficient = position_type_info["network_flags_rtcm_insufficient"]
+            network_flags_rtcm_good = position_type_info["network_flags_rtcm_good"]
+            network_flags_outside_geofence = position_type_info["network_flags_outside_of_geofence"]
+            network_flags_outside_rtk_range = position_type_info["network_flags_outside_of_rtk_range_base"]
+            network_flags_xfill_operation = position_type_info["network_flags_xfill_operation"]
+            network_flags_rtx_position = position_type_info["network_flags_rtx_position_flag"]
+            network_flags_rtx_xfill_down = position_type_info["network_flags_rtx_xfill_is_down"]
+            
+            # Network flags2 data extraction
+            network_flags2_xfill_ready = position_type_info["network_flags2_xfill_ready"]
+            network_flags2_rtx_fast = position_type_info["network_flags2_rtx_fast"]
+            network_flags2_rtx_offset = position_type_info["network_flags2_rtx_offset"]
+            network_flags2_cmrxe_received = position_type_info["network_flags2_cmrxe_received"]
+            network_flags2_rtx_wet_area = position_type_info["network_flags2_rtx_wet_area"]
 
             is_position_type_info_available = True
         
@@ -388,20 +412,94 @@ class GsofPlotGenerator:
 
 
         if (is_position_type_info_available):
-            correction_age_plot.line(position_type_info_timestamp, position_type_info_correction_age, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
-            rtk_fix_plot.line(position_type_info_timestamp, position_type_info_is_rtk_fix, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            correction_age_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_correction_age, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
+            correction_age_plot.line('x', 'y', source=correction_age_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            
+            rtk_fix_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_is_rtk_fix, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
+            rtk_fix_plot.line('x', 'y', source=rtk_fix_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
 
-            network_solution_plot.line(position_type_info_timestamp, position_type_info_is_network_solution, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            network_solution_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_is_network_solution, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
+            network_solution_plot.line('x', 'y', source=network_solution_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
 
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_new_position_computed, alpha=0.8, color="blue", line_width=2, legend_label="rtk_cond_new_position_computed")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_no_synced_pair, alpha=0.8, color="red", line_width=2, legend_label="rtk_cond_no_synced_pair")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_insuff_dd_meas, alpha=0.8, color="green", line_width=2, legend_label="rtk_cond_insuff_dd_meas")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_ref_pos_unavailable, alpha=0.8, color="orange", line_width=2, legend_label="rtk_cond_ref_pos_unavailable")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_failed_integer_ver_with_fix_sol, alpha=0.8, color="purple", line_width=2, legend_label="rtk_cond_failed_integer_ver_with_fix_sol")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_sol_res_rms_exceeds, alpha=0.8, color="brown", line_width=2, legend_label="rtk_cond_sol_res_rms_exceeds")
-            rtk_condition_plot.line(position_type_info_timestamp, rtk_cond_pdop_exceeds, alpha=0.8, color="cyan", line_width=2, legend_label="rtk_cond_pdop_exceeds")
+            # Init integrity plots with ColumnDataSource
+            init_integrity_1_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_init_integrity_1, source=["init_integrity_1"]*len(position_type_info_timestamp)))
+            init_integrity_plot.line('x', 'y', source=init_integrity_1_source, alpha=0.8, color="blue", line_width=2, legend_label="init_integrity_1")
+            
+            init_integrity_2_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_init_integrity_2, source=["init_integrity_2"]*len(position_type_info_timestamp)))
+            init_integrity_plot.line('x', 'y', source=init_integrity_2_source, alpha=0.8, color="red", line_width=2, legend_label="init_integrity_2")
 
-            position_fix_type_plot.line(position_type_info_timestamp, position_type_info_position_fix_type, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            # RTK condition plots with ColumnDataSource
+            rtk_cond_new_pos_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_new_position_computed, source=["rtk_cond_new_position_computed"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_new_pos_source, alpha=0.8, color="blue", line_width=2, legend_label="rtk_cond_new_position_computed")
+            
+            rtk_cond_no_sync_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_no_synced_pair, source=["rtk_cond_no_synced_pair"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_no_sync_source, alpha=0.8, color="red", line_width=2, legend_label="rtk_cond_no_synced_pair")
+            
+            rtk_cond_insuff_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_insuff_dd_meas, source=["rtk_cond_insuff_dd_meas"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_insuff_source, alpha=0.8, color="green", line_width=2, legend_label="rtk_cond_insuff_dd_meas")
+            
+            rtk_cond_ref_pos_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_ref_pos_unavailable, source=["rtk_cond_ref_pos_unavailable"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_ref_pos_source, alpha=0.8, color="orange", line_width=2, legend_label="rtk_cond_ref_pos_unavailable")
+            
+            rtk_cond_failed_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_failed_integer_ver_with_fix_sol, source=["rtk_cond_failed_integer_ver_with_fix_sol"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_failed_source, alpha=0.8, color="purple", line_width=2, legend_label="rtk_cond_failed_integer_ver_with_fix_sol")
+            
+            rtk_cond_sol_res_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_sol_res_rms_exceeds, source=["rtk_cond_sol_res_rms_exceeds"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_sol_res_source, alpha=0.8, color="brown", line_width=2, legend_label="rtk_cond_sol_res_rms_exceeds")
+            
+            rtk_cond_pdop_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=rtk_cond_pdop_exceeds, source=["rtk_cond_pdop_exceeds"]*len(position_type_info_timestamp)))
+            rtk_condition_plot.line('x', 'y', source=rtk_cond_pdop_source, alpha=0.8, color="cyan", line_width=2, legend_label="rtk_cond_pdop_exceeds")
+
+            position_fix_type_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_position_fix_type, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
+            position_fix_type_plot.line('x', 'y', source=position_fix_type_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+
+            # RTCM Status plots with ColumnDataSource
+            rtcm_not_avail_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtcm_not_available, source=["rtcm_not_available"]*len(position_type_info_timestamp)))
+            rtcm_status_plot.line('x', 'y', source=rtcm_not_avail_source, alpha=0.8, color="red", line_width=2, legend_label="rtcm_not_available")
+            
+            rtcm_not_full_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtcm_not_full_cycle, source=["rtcm_not_full_cycle"]*len(position_type_info_timestamp)))
+            rtcm_status_plot.line('x', 'y', source=rtcm_not_full_source, alpha=0.8, color="orange", line_width=2, legend_label="rtcm_not_full_cycle")
+            
+            rtcm_insufficient_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtcm_insufficient, source=["rtcm_insufficient"]*len(position_type_info_timestamp)))
+            rtcm_status_plot.line('x', 'y', source=rtcm_insufficient_source, alpha=0.8, color="yellow", line_width=2, legend_label="rtcm_insufficient")
+            
+            rtcm_good_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtcm_good, source=["rtcm_good"]*len(position_type_info_timestamp)))
+            rtcm_status_plot.line('x', 'y', source=rtcm_good_source, alpha=0.8, color="green", line_width=2, legend_label="rtcm_good")
+
+            # Network flags plots with ColumnDataSource
+            new_base_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_new_base_station, source=["new_base_station"]*len(position_type_info_timestamp)))
+            network_flags_plot.line('x', 'y', source=new_base_source, alpha=0.8, color="blue", line_width=2, legend_label="new_base_station")
+            
+            outside_geofence_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_outside_geofence, source=["outside_geofence"]*len(position_type_info_timestamp)))
+            network_flags_plot.line('x', 'y', source=outside_geofence_source, alpha=0.8, color="red", line_width=2, legend_label="outside_geofence")
+            
+            outside_rtk_range_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_outside_rtk_range, source=["outside_rtk_range"]*len(position_type_info_timestamp)))
+            network_flags_plot.line('x', 'y', source=outside_rtk_range_source, alpha=0.8, color="orange", line_width=2, legend_label="outside_rtk_range")
+
+            # RTX/xFill status plots with ColumnDataSource
+            xfill_operation_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_xfill_operation, source=["xfill_operation"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=xfill_operation_source, alpha=0.8, color="blue", line_width=2, legend_label="xfill_operation")
+            
+            rtx_position_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtx_position, source=["rtx_position"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=rtx_position_source, alpha=0.8, color="green", line_width=2, legend_label="rtx_position")
+            
+            rtx_xfill_down_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags_rtx_xfill_down, source=["rtx_xfill_down"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=rtx_xfill_down_source, alpha=0.8, color="red", line_width=2, legend_label="rtx_xfill_down")
+            
+            xfill_ready_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags2_xfill_ready, source=["xfill_ready"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=xfill_ready_source, alpha=0.8, color="cyan", line_width=2, legend_label="xfill_ready")
+            
+            rtx_fast_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags2_rtx_fast, source=["rtx_fast"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=rtx_fast_source, alpha=0.8, color="purple", line_width=2, legend_label="rtx_fast")
+            
+            rtx_offset_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags2_rtx_offset, source=["rtx_offset"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=rtx_offset_source, alpha=0.8, color="brown", line_width=2, legend_label="rtx_offset")
+            
+            cmrxe_received_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags2_cmrxe_received, source=["cmrxe_received"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=cmrxe_received_source, alpha=0.8, color="magenta", line_width=2, legend_label="cmrxe_received")
+            
+            rtx_wet_area_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=network_flags2_rtx_wet_area, source=["rtx_wet_area"]*len(position_type_info_timestamp)))
+            rtx_xfill_status_plot.line('x', 'y', source=rtx_wet_area_source, alpha=0.8, color="orange", line_width=2, legend_label="rtx_wet_area")
 
         if (is_received_base_info_available):
             base_valid_plot.line(received_base_info_timestamp, base_valid, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
@@ -439,12 +537,20 @@ class GsofPlotGenerator:
         rtk_fix_plot.legend.click_policy = "hide"  
         network_solution_plot.legend.location = "top_right"
         network_solution_plot.legend.click_policy = "hide"  
+        init_integrity_plot.legend.location = "top_right"
+        init_integrity_plot.legend.click_policy = "hide"  
         rtk_condition_plot.legend.location = "top_right"
         rtk_condition_plot.legend.click_policy = "hide"  
         position_fix_type_plot.legend.location = "top_right"
         position_fix_type_plot.legend.click_policy = "hide"  
+        rtcm_status_plot.legend.location = "top_right"
+        rtcm_status_plot.legend.click_policy = "hide"  
+        network_flags_plot.legend.location = "top_right"
+        network_flags_plot.legend.click_policy = "hide"  
+        rtx_xfill_status_plot.legend.location = "top_right"
+        rtx_xfill_status_plot.legend.click_policy = "hide"  
         base_valid_plot.legend.location = "top_right"
-        base_valid_plot.legend.click_policy = "hide"  
+        base_valid_plot.legend.click_policy = "hide"
         base_id_plot.legend.location = "top_right"
         base_id_plot.legend.click_policy = "hide" 
         base_lat_plot.legend.location = "top_right"
@@ -469,9 +575,12 @@ class GsofPlotGenerator:
             [num_of_svs_plot, init_num_plot],
             [position_flags_1_plot, position_flags_2_plot],
             [Div(text="<h1 style='margin-left: 2em;'>Position Type Info (38)</h1>")],
-            [network_solution_plot],
+            [network_solution_plot, init_integrity_plot],
             [rtk_fix_plot, rtk_condition_plot],
             [correction_age_plot, position_fix_type_plot],
+            [Div(text="<h1 style='margin-left: 2em;'>Network Status</h1>")],
+            [rtcm_status_plot, network_flags_plot],
+            [rtx_xfill_status_plot],
             [Div(text="<h1 style='margin-left: 2em;'>Reference Station (35)</h1>")],
             [base_valid_plot, base_id_plot, base_alt_plot],
             [base_lat_plot, base_lon_plot, base_alt_plot2],
