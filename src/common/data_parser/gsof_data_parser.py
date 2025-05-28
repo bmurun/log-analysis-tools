@@ -119,6 +119,7 @@ class GsofDataParser:
 
         self.position_type_info = {
             "timestamp": [],
+            "error_scale": [],
             "is_network_solution": [],
             "is_rtk_fix": [],
             "init_integrity_1": [],
@@ -353,6 +354,7 @@ class GsofDataParser:
                     timestamp = sec + nanosec / 1e9
 
                     self.position_type_info["timestamp"].append(timestamp)
+                    self.position_time_info["error_scale"].append(data.error_scale)
                     self.position_type_info["is_network_solution"].append(bool(data.solution_flags & (1 << 0)))
                     self.position_type_info["is_rtk_fix"].append(bool(data.solution_flags & (1 << 1)))
                     self.position_type_info["init_integrity_1"].append(bool(data.solution_flags & (1 << 2)))
