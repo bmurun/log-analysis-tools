@@ -219,6 +219,10 @@ class GsofPlotGenerator:
         base_lon_plot = self.create_bokeh_figure("Reference Station Latitude", "Timestamp", "Longitude [deg]")
         base_alt_plot = self.create_bokeh_figure("Reference Station Altitude WGS84", "Timestamp", "Altitude [m]")
 
+        base_north_plot = self.create_bokeh_figure("Reference Station North", "Timestamp", "North [m]")
+        base_east_plot = self.create_bokeh_figure("Reference Station East", "Timestamp", "East [m]")
+        base_down_plot = self.create_bokeh_figure("Reference Station Down", "Timestamp", "Down [m]")
+
         is_position_time_info_available = False
         is_position_type_info_available = False
         is_received_base_info_available = False
@@ -282,6 +286,13 @@ class GsofPlotGenerator:
             base_east_m = []
             base_down_m = []
 
+            for lat, lon, alt in zip(base_lat_deg, base_lon_deg, base_height_m):
+                n_m, e_m, d_m = self.lla2ned(lat, lon, alt)
+
+                base_north_m.append(n_m)
+                base_east_m.append(e_m)
+                base_down_m.append(d_m)
+
             is_received_base_info_available = True
 
         if (is_position_time_info_available):
@@ -333,6 +344,13 @@ class GsofPlotGenerator:
 
             base_alt_plot.line(received_base_info_timestamp, base_height_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
 
+    
+            base_north_plot.line(received_base_info_timestamp, base_north_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_east_plot.line(received_base_info_timestamp, base_east_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
+            base_down_plot.line(received_base_info_timestamp, base_down_m, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/received_base_info")
+
 
         num_of_svs_plot.legend.location = "top_right"
         num_of_svs_plot.legend.click_policy = "hide"  
@@ -363,6 +381,12 @@ class GsofPlotGenerator:
         base_lon_plot.legend.click_policy = "hide" 
         base_alt_plot.legend.location = "top_right"
         base_alt_plot.legend.click_policy = "hide" 
+        base_north_plot.legend.location = "top_right"
+        base_north_plot.legend.click_policy = "hide" 
+        base_east_plot.legend.location = "top_right"
+        base_east_plot.legend.click_policy = "hide" 
+        base_down_plot.legend.location = "top_right"
+        base_down_plot.legend.click_policy = "hide" 
 
         save(gridplot([
             [Div(text="<h1 style='margin-left: 2em;'>Position Time Info (1)</h1>")],
@@ -375,6 +399,7 @@ class GsofPlotGenerator:
             [Div(text="<h1 style='margin-left: 2em;'>Reference Station (35)</h1>")],
             [base_valid_plot, base_id_plot, base_alt_plot],
             [base_lat_plot, base_lon_plot, base_alt_plot],
+            [base_north_plot, base_east_plot, base_down_plot],
         ]))
 
     def generate_sky_plots(self, output_file_name):
