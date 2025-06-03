@@ -2,6 +2,7 @@ import numpy as np
 import os
 import sys
 import click
+import bisect
 
 from mcap.reader import make_reader
 from rclpy.serialization import deserialize_message
@@ -35,6 +36,7 @@ class GsofDataParser:
         self.ins_solution = {
             "timestamp": [],
             "gnss_status": [],
+            "imu_alignment": [],
             "latitude": [],
             "longitude": [],
             "altitude": [],
@@ -43,7 +45,9 @@ class GsofDataParser:
             "yaw": [],
             "north_vel": [],
             "east_vel": [],
-            "down_vel": []
+            "down_vel": [],
+            "gps_time_ms": [],
+            "gps_week_number": [],
         }
 
         self.ins_solution_rms = {
@@ -248,6 +252,7 @@ class GsofDataParser:
 
                     self.ins_solution["timestamp"].append(timestamp)
                     self.ins_solution["gnss_status"].append(data.status.gnss)
+                    self.ins_solution["imu_alignment"].append(data.status.imu_alignment)
                     self.ins_solution["latitude"].append(data.lla.latitude)
                     self.ins_solution["longitude"].append(data.lla.longitude)
                     self.ins_solution["altitude"].append(data.lla.altitude)
@@ -257,6 +262,10 @@ class GsofDataParser:
                     self.ins_solution["north_vel"].append(data.velocity.north)
                     self.ins_solution["east_vel"].append(data.velocity.east)
                     self.ins_solution["down_vel"].append(data.velocity.down)
+
+                    self.ins_solution["gps_time_ms"].append(data.gps_time.time)
+                    self.ins_solution["gps_week_number"].append(data.gps_time.week)
+
                 elif topic_name == "/lvx_client/navsat":
 
                     sec = data.header.stamp.sec
@@ -354,7 +363,7 @@ class GsofDataParser:
                     timestamp = sec + nanosec / 1e9
 
                     self.position_type_info["timestamp"].append(timestamp)
-                    self.position_time_info["error_scale"].append(data.error_scale)
+                    self.position_type_info["error_scale"].append(data.error_scale)
                     self.position_type_info["is_network_solution"].append(bool(data.solution_flags & (1 << 0)))
                     self.position_type_info["is_rtk_fix"].append(bool(data.solution_flags & (1 << 1)))
                     self.position_type_info["init_integrity_1"].append(bool(data.solution_flags & (1 << 2)))
@@ -432,29 +441,76 @@ class GsofDataParser:
                     self.code_lat_lon_ht["height"].append(data.height)
                 else:
                     pass
+                
 
     def _process_data(self):
-        """ Post processing: validate timestamps and normalize to start from zero
+        """ Post processing: Interpolate or validate timestamps and normalize to start from zero
         """
 
-        for topic, data in self.mcap_data.items():
-            
-            if topic in MCAP_ROS2_GSOF_TOPICS:
-                if "header" in data:
-                    sec_list = data.header.stamp.sec
-                    nanosec_list = data.header.stamp.nanosec
-                    timestamp_list = np.array(sec_list) + np.array(nanosec_list) / 1e9
-                    data["timestamp"] = timestamp_list
-                    del data["header"]
-                if "stamp" in data:
-                    sec_list = data["stamp"]["sec"]
-                    nanosec_list = data["stamp"]["nanosec"]
-                    timestamp_list = np.array(sec_list) + np.array(nanosec_list) / 1e9
-                    data["timestamp"] = timestamp_list
-                    del data["stamp"]
+        # First interpolate PositionTypeInfo timestamp given INS solution timestamp
+        def compute_gps_total_ms(week, ms):
+            return week * 7 * 24 * 3600 * 1000 + ms
+        
+        ins_gps_total_ms = [
+            compute_gps_total_ms(week, ms)
+            for week, ms in zip(self.ins_solution["gps_week_number"], self.ins_solution["gps_time_ms"])
+        ]
 
-                self._convert_lists_to_numpy(data)
+        ins_timestamps = self.ins_solution["timestamp"]
 
+        sorted_indices = sorted(range(len(ins_gps_total_ms)), key=lambda i: ins_gps_total_ms[i])
+        ins_gps_total_ms_sorted = [ins_gps_total_ms[i] for i in sorted_indices]
+        ins_timestamps_sorted = [ins_timestamps[i] for i in sorted_indices]
+
+        def interpolate_timestamp(target_ms):
+            idx = bisect.bisect_left(ins_gps_total_ms_sorted, target_ms)
+            if idx == 0:
+                return ins_timestamps_sorted[0]
+            elif idx >= len(ins_gps_total_ms_sorted):
+                return ins_timestamps_sorted[-1]
+            else:
+                x0, x1 = ins_gps_total_ms_sorted[idx - 1], ins_gps_total_ms_sorted[idx]
+                y0, y1 = ins_timestamps_sorted[idx - 1], ins_timestamps_sorted[idx]
+                return y0 + (y1 - y0) * (target_ms - x0) / (x1 - x0)
+
+        # Step 4: Apply interpolation for all entries in self.position_time_info
+        self.position_time_info["timestamp"] = []
+        for week, ms in zip(self.position_time_info["gps_week_number"], self.position_time_info["gps_time_ms"]):
+            target_ms = compute_gps_total_ms(week, ms)
+            interp_ts = interpolate_timestamp(target_ms)
+            self.position_time_info["timestamp"].append(interp_ts)
+
+        # Now use PositionTimeInfo to extract PositionTypeInfo timestamp
+        # use the uses_phase from PositionTimeInfo and position_fix_type from PositionTypeInfo
+
+        # First generate base timestamp assuming uniform sampling over the same time period for PositionTypeInfo
+        num_pts = len(self.position_type_info["position_fix_type"])
+        start_time = self.position_time_info["timestamp"][0]
+        end_time = self.position_time_info["timestamp"][-1]
+        uniform_timestamps = np.linspace(start_time, end_time, num_pts)
+
+        # Find the transition times (0->) from PositionTimeInfo's uses_phase
+        position_time_info_uses_phase = self.position_time_info["uses_phase"]
+        position_time_info_timestamp = np.array(self.position_time_info["timestamp"])
+        transition_times = position_time_info_timestamp[np.where(np.diff(np.array(position_time_info_uses_phase, dtype=int)) == 1)[0] + 1]
+
+        position_type_info_timestamp = []
+
+
+        for i, (val, t_uniform) in enumerate(zip(self.position_type_info["position_fix_type"], uniform_timestamps)):
+            if val == 29:
+                matching_transitions = transition_times[transition_times <= t_uniform]
+                if matching_transitions.size > 0:
+                    position_type_info_timestamp.append(matching_transitions[-1])  # most recent transition
+                else:
+                    position_type_info_timestamp.append(t_uniform)  # fallback if no earlier transitions
+            else:
+                position_type_info_timestamp.append(t_uniform)  # use uniform time for non-29
+
+        # Update the dictionary
+        self.position_type_info["timestamp"] = position_type_info_timestamp
+
+        
         # Interpolate/extrapolate timestamp for messages that don't have
         # header timestamp properly logged
         self.first_ts = self.ins_solution["timestamp"][0]

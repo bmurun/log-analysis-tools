@@ -118,6 +118,8 @@ class GsofPlotGenerator:
 
         gnss_status_plot = self.create_bokeh_figure("GNSS Status\n0: No Fix, 1: GPS SPS, 2: DGNSS\n3: GPS PPS, 4: RTK Fixed, 5: RTK Float\n6: Dead Reckoning ", "Timestamp", "Status")
 
+        imu_status_plot = self.create_bokeh_figure("IMU Alignment Status\n0: GPS only, 1: Coarse leveling, 2: Degraded solution\n3: Aligned, 4: Full Navigation mode", "Timestamp", "Status")
+
         x_stdev_plot = self.create_bokeh_figure("X Position Stdev", "Timestamp", "Stdev [m]")
         y_stdev_plot = self.create_bokeh_figure("Y Position Stdev", "Timestamp", "Stdev [m]")
         z_stdev_plot = self.create_bokeh_figure("Z Position Stdev", "Timestamp", "Stdev [m]")
@@ -134,6 +136,7 @@ class GsofPlotGenerator:
 
         ins_solution_timestamp = self.data_parser.ins_solution["timestamp"]
         ins_solution_gnss_status = self.data_parser.ins_solution["gnss_status"]
+        ins_solution_imu_alignment = self.data_parser.ins_solution["imu_alignment"]
         ins_solution_lat_deg = self.data_parser.ins_solution["latitude"]
         ins_solution_lon_deg = self.data_parser.ins_solution["longitude"]
         ins_solution_lat_height = self.data_parser.ins_solution["altitude"]
@@ -141,11 +144,17 @@ class GsofPlotGenerator:
         ins_solution_east = []
         ins_solution_down = []
 
-        for lat, lon, alt in zip(ins_solution_lat_deg, ins_solution_lon_deg, ins_solution_lat_height):
-            n_m, e_m, d_m = self.lla2ned(lat, lon, alt)
-            ins_solution_north.append(n_m)
-            ins_solution_east.append(e_m)
-            ins_solution_down.append(d_m)
+        for lat, lon, alt, status in zip(ins_solution_lat_deg, ins_solution_lon_deg, ins_solution_lat_height, ins_solution_gnss_status):
+
+            if (status != 0):
+                n_m, e_m, d_m = self.lla2ned(lat, lon, alt)
+                ins_solution_north.append(n_m)
+                ins_solution_east.append(e_m)
+                ins_solution_down.append(d_m)
+            else:
+                ins_solution_north.append(0)
+                ins_solution_east.append(0)
+                ins_solution_down.append(0)     
 
 
         if hasattr(self.data_parser, "code_lat_lon_ht"):
@@ -194,6 +203,9 @@ class GsofPlotGenerator:
         ins_status_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_gnss_status, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
         gnss_status_plot.scatter('x', 'y', source=ins_status_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
 
+        ins_status_imu_alignment_source = ColumnDataSource(data=dict(x=ins_solution_timestamp, y=ins_solution_imu_alignment, source=["/gsof/ins_solution"]*len(ins_solution_timestamp)))
+        imu_status_plot.scatter('x', 'y', source=ins_status_imu_alignment_source, alpha=0.8, size=2.5, color="red", legend_label="/gsof/ins_solution")
+
         if (is_code_pvt_available):
             # Code lat lon ht plots with ColumnDataSource
             code_ne_source = ColumnDataSource(data=dict(x=code_lat_long_east, y=code_lat_long_north, source=["/gsof/code_lat_lon_ht"]*len(code_lat_long_east)))
@@ -225,10 +237,13 @@ class GsofPlotGenerator:
         gnss_status_plot.legend.location = "top_right"
         gnss_status_plot.legend.click_policy = "hide"  
 
+        imu_status_plot.legend.location = "top_right"
+        imu_status_plot.legend.click_policy = "hide"  
+
         save(gridplot([
             [ne_plot],
             [x_plot, y_plot, z_plot],
-            [gnss_status_plot]
+            [gnss_status_plot, imu_status_plot]
         ]))
 
     def generate_rtk_status_plots(self, output_file_name):
@@ -240,9 +255,9 @@ class GsofPlotGenerator:
         position_flags_1_plot = self.create_bokeh_figure("Position Flags 1", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
         position_flags_2_plot = self.create_bokeh_figure("Position Flags 2", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
 
-        network_solution_plot = self.create_bokeh_figure("Network Solution", "Timestamp", "Bool")
+        network_solution_plot = self.create_bokeh_figure("Network Solution\nWide Area/Network/VRS", "Timestamp", "Bool")
         correction_age_plot = self.create_bokeh_figure("Correction Age", "Timestamp", "Age [s]")
-        rtk_fix_plot = self.create_bokeh_figure("RTK Fix", "Timestamp", "Bool")
+        rtk_fix_plot = self.create_bokeh_figure("RTK Fix Solution\n0: RTK Float, 1: RTK Fixed", "Timestamp", "Bool")
         init_integrity_plot = self.create_bokeh_figure("Init Integrity", "Timestamp", "Bool")
         rtk_condition_plot = self.create_bokeh_figure("RTK Condition", "Timestamp", "Bool", height=self.EXTRA_TALL_PLOT_HEIGHT)
         position_fix_type_plot = self.create_bokeh_figure("Position Fix Type", "Timestamp", "Fix Type")
