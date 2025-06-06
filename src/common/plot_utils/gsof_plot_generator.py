@@ -428,7 +428,7 @@ class GsofPlotGenerator:
 
         if (is_position_type_info_available):
             correction_age_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_correction_age, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
-            correction_age_plot.line('x', 'y', source=correction_age_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")
+            correction_age_plot.scatter('x', 'y', source=correction_age_source, alpha=0.8, color="blue", size=2.5, legend_label="/gsof/position_type_info")
             
             rtk_fix_source = ColumnDataSource(data=dict(x=position_type_info_timestamp, y=position_type_info_is_rtk_fix, source=["/gsof/position_type_info"]*len(position_type_info_timestamp)))
             rtk_fix_plot.line('x', 'y', source=rtk_fix_source, alpha=0.8, color="blue", line_width=2, legend_label="/gsof/position_type_info")

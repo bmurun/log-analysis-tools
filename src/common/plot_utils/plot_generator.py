@@ -168,7 +168,7 @@ class PlotGenerator:
         yaw_plot = self.create_bokeh_figure("Yaw", "Timestamp", "Yaw [deg]")
         yaw_plot.add_tools(hover)
 
-        status_plot = self.create_bokeh_figure("Ego Indoors and GNSS Status", "Timestamp", "")
+        status_plot = self.create_bokeh_figure("Ego Indoors and GNSS/IMU Status", "Timestamp", "")
         status_plot.add_tools(hover)
 
         localization_mode_plot = self.create_bokeh_figure("Localization Mode", "Timestamp", "Mode")
@@ -466,6 +466,7 @@ class PlotGenerator:
             ins_solution_49 = self.data_parser.mcap_data["/lvx_client/gsof/ins_solution_49"]
             ins_solution_49_timestamp = ins_solution_49["timestamp"]
             ins_solution_49_gnss_status = ins_solution_49["status"]["gnss"]
+            ins_solution_49_imu_alignment = ins_solution_49["status"]["imu_alignment"]
             is_ins_solution_49_available = True
 
         try:
@@ -731,6 +732,9 @@ class PlotGenerator:
         if is_ins_solution_49_available:
             source = ColumnDataSource(data=dict(x=ins_solution_49_timestamp, y=ins_solution_49_gnss_status, source=["/gnss_status"]*len(ins_solution_49_timestamp)))
             status_plot.line('x', 'y', source=source, alpha=0.8, color="blue", line_width=2, legend_label="/gnss_status")
+
+            source = ColumnDataSource(data=dict(x=ins_solution_49_timestamp, y=ins_solution_49_imu_alignment, source=["/imu_alignment"]*len(ins_solution_49_timestamp)))
+            status_plot.line('x', 'y', source=source, alpha=0.8, color="red", line_width=2, legend_label="/imu_alignment")
 
         if is_cartographer_convergence_status_available:
             source = ColumnDataSource(data=dict(x=cartographer_convergence_status_timestamp, y=is_cartographer_reliable, source=["/cartographer_convergence_status"]*len(cartographer_convergence_status_timestamp)))

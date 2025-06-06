@@ -358,9 +358,11 @@ class GsofDataParser:
                     self.received_base_info["base_valid"].append(base_valid)
                 elif topic_name == "/lvx_client/gsof/position_type_info_38":
                     # https://receiverhelp.trimble.com/alloy-gnss/en-us/gsof-messages-position-type.html?tocpath=Output%20Messages%7CGSOF%20messages%7C_____24
-                    sec = data.header.stamp.sec
-                    nanosec = data.header.stamp.nanosec
-                    timestamp = sec + nanosec / 1e9
+                    # sec = data.header.stamp.sec
+                    # nanosec = data.header.stamp.nanosec
+                    # timestamp = sec + nanosec / 1e9
+                    # Header timestamp is not populated
+                    timestamp = 0
 
                     self.position_type_info["timestamp"].append(timestamp)
                     self.position_type_info["error_scale"].append(data.error_scale)
@@ -489,23 +491,61 @@ class GsofDataParser:
         end_time = self.position_time_info["timestamp"][-1]
         uniform_timestamps = np.linspace(start_time, end_time, num_pts)
 
-        # Find the transition times (0->) from PositionTimeInfo's uses_phase
+        # Find the transition times (0→1) from PositionTimeInfo's uses_phase
         position_time_info_uses_phase = self.position_time_info["uses_phase"]
         position_time_info_timestamp = np.array(self.position_time_info["timestamp"])
         transition_times = position_time_info_timestamp[np.where(np.diff(np.array(position_time_info_uses_phase, dtype=int)) == 1)[0] + 1]
 
-        position_type_info_timestamp = []
+        # Find where position_fix_type transitions TO 29 (not just where it IS 29)
+        position_fix_type_arr = np.array(self.position_type_info["position_fix_type"])
+        transitions_to_29_indices = np.where((position_fix_type_arr[1:] == 29) & (position_fix_type_arr[:-1] != 29))[0] + 1
 
+        # Create a mapping of transition indices to transition times
+        transition_mapping = {}
+        min_transitions = min(len(transitions_to_29_indices), len(transition_times))
+        for i in range(min_transitions):
+            transition_mapping[transitions_to_29_indices[i]] = transition_times[i]
 
-        for i, (val, t_uniform) in enumerate(zip(self.position_type_info["position_fix_type"], uniform_timestamps)):
-            if val == 29:
-                matching_transitions = transition_times[transition_times <= t_uniform]
-                if matching_transitions.size > 0:
-                    position_type_info_timestamp.append(matching_transitions[-1])  # most recent transition
+        # First pass: create sparse array with known good timestamps at transition points
+        position_type_info_timestamp = [None] * len(self.position_type_info["position_fix_type"])
+        for i in transition_mapping:
+            position_type_info_timestamp[i] = transition_mapping[i]
+        
+        # Second pass: interpolate between known good points
+        known_indices = sorted(transition_mapping.keys())
+        
+        if len(known_indices) > 0:
+            # Handle start to first known point
+            start_time = self.position_time_info["timestamp"][0]
+            for i in range(known_indices[0]):
+                if known_indices[0] > 0:
+                    position_type_info_timestamp[i] = start_time + (transition_mapping[known_indices[0]] - start_time) * i / known_indices[0]
                 else:
-                    position_type_info_timestamp.append(t_uniform)  # fallback if no earlier transitions
-            else:
-                position_type_info_timestamp.append(t_uniform)  # use uniform time for non-29
+                    position_type_info_timestamp[i] = transition_mapping[known_indices[0]]
+            
+            # Handle between known points
+            for j in range(len(known_indices) - 1):
+                start_idx = known_indices[j]
+                end_idx = known_indices[j + 1]
+                start_time = transition_mapping[start_idx]
+                end_time = transition_mapping[end_idx]
+                
+                for i in range(start_idx + 1, end_idx):
+                    progress = (i - start_idx) / (end_idx - start_idx)
+                    position_type_info_timestamp[i] = start_time + (end_time - start_time) * progress
+            
+            # Handle after last known point
+            last_idx = known_indices[-1]
+            end_time = self.position_time_info["timestamp"][-1]
+            for i in range(last_idx + 1, len(position_type_info_timestamp)):
+                if i > last_idx:
+                    # Simple extrapolation assuming constant rate
+                    position_type_info_timestamp[i] = transition_mapping[last_idx] + (end_time - transition_mapping[last_idx]) * (i - last_idx) / (len(position_type_info_timestamp) - 1 - last_idx)
+                else:
+                    position_type_info_timestamp[i] = transition_mapping[last_idx]
+        else:
+            # Fallback: no transitions found, use uniform distribution
+            position_type_info_timestamp = list(uniform_timestamps)
 
         # Update the dictionary
         self.position_type_info["timestamp"] = position_type_info_timestamp
